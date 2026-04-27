@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useFridgeData } from "@/hooks/useFridgeData";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Thermometer, Battery, Zap, AlertTriangle } from "lucide-react";
+import { Thermometer, Battery, Zap, AlertTriangle, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function CircularBattery({ value }: { value: number | null }) {
@@ -49,9 +50,15 @@ function CircularBattery({ value }: { value: number | null }) {
 
 export default function Dashboard() {
   const { temperature, battery, voltage, alerts } = useFridgeData();
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const activeAlertsList = alerts.filter((a) => !a.is_read);
   const activeAlerts = activeAlertsList.length;
   const activeTypes = Array.from(new Set(activeAlertsList.map((a) => a.type)));
+  const typeCounts = activeAlertsList.reduce<Record<string, number>>((acc, a) => {
+    acc[a.type] = (acc[a.type] ?? 0) + 1;
+    return acc;
+  }, {});
 
   useEffect(() => {
     document.title = "Dashboard · Solar Fridge";
@@ -170,6 +177,32 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card className="border-primary/40">
+          <CardHeader className="flex-row items-center gap-2 space-y-0">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Vue administrateur</CardTitle>
+            <Badge variant="secondary" className="ml-auto">admin</Badge>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Répartition des alertes actives par type (toutes installations).
+            </p>
+            {activeTypes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune alerte active.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(typeCounts).map(([t, n]) => (
+                  <Badge key={t} variant="outline" className="text-sm">
+                    {t} · {n}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

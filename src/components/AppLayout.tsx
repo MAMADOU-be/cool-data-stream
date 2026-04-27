@@ -59,7 +59,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <div className="hidden text-right text-xs sm:block">
               <div className="font-medium">{user?.email}</div>
-              <div className="text-muted-foreground capitalize">{role ?? "user"}</div>
+              <div className="flex items-center justify-end gap-1.5 text-muted-foreground capitalize">
+                {role === "admin" && (
+                  <Badge variant="default" className="h-5 px-1.5 text-[10px]">admin</Badge>
+                )}
+                {role !== "admin" && <span>{role ?? "user"}</span>}
+              </div>
             </div>
             <Button variant="ghost" size="icon" onClick={signOut} aria-label="Se déconnecter">
               <LogOut className="h-4 w-4" />

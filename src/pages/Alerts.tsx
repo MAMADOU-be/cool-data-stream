@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFridgeData } from "@/hooks/useFridgeData";
+import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -18,6 +19,8 @@ type FilterMode = "all" | "active";
 
 export default function Alerts() {
   const { alerts, toggleAlertRead } = useFridgeData();
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [filter, setFilter] = useState<FilterMode>("active");
 
   useEffect(() => {
@@ -84,6 +87,7 @@ export default function Alerts() {
                         <Switch
                           checked={a.is_read}
                           onCheckedChange={() => toggleAlertRead(a.id, a.is_read)}
+                          disabled={!isAdmin}
                           aria-label="Marquer comme lu"
                         />
                       </TableCell>
