@@ -19,6 +19,8 @@ type FilterMode = "all" | "active";
 
 export default function Alerts() {
   const { alerts, toggleAlertRead } = useFridgeData();
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [filter, setFilter] = useState<FilterMode>("active");
 
   useEffect(() => {
