@@ -49,7 +49,9 @@ function CircularBattery({ value }: { value: number | null }) {
 
 export default function Dashboard() {
   const { temperature, battery, voltage, alerts } = useFridgeData();
-  const activeAlerts = alerts.filter((a) => !a.is_read).length;
+  const activeAlertsList = alerts.filter((a) => !a.is_read);
+  const activeAlerts = activeAlertsList.length;
+  const activeTypes = Array.from(new Set(activeAlertsList.map((a) => a.type)));
 
   useEffect(() => {
     document.title = "Dashboard · Solar Fridge";
