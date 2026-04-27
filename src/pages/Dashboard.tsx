@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useFridgeData } from "@/hooks/useFridgeData";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Thermometer, Battery, Zap, AlertTriangle } from "lucide-react";
+import { Thermometer, Battery, Zap, AlertTriangle, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function CircularBattery({ value }: { value: number | null }) {
