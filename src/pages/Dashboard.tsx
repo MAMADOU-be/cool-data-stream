@@ -177,6 +177,32 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card className="border-primary/40">
+          <CardHeader className="flex-row items-center gap-2 space-y-0">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Vue administrateur</CardTitle>
+            <Badge variant="secondary" className="ml-auto">admin</Badge>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Répartition des alertes actives par type (toutes installations).
+            </p>
+            {activeTypes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune alerte active.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(typeCounts).map(([t, n]) => (
+                  <Badge key={t} variant="outline" className="text-sm">
+                    {t} · {n}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
