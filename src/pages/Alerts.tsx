@@ -14,30 +14,45 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+type FilterMode = "all" | "active";
+
 export default function Alerts() {
   const { alerts, toggleAlertRead } = useFridgeData();
+  const [filter, setFilter] = useState<FilterMode>("active");
 
   useEffect(() => {
     document.title = "Alertes · Solar Fridge";
   }, []);
+
+  const activeCount = useMemo(() => alerts.filter((a) => !a.is_read).length, [alerts]);
+  const filtered = useMemo(
+    () => (filter === "active" ? alerts.filter((a) => !a.is_read) : alerts),
+    [alerts, filter]
+  );
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Alertes</h1>
         <p className="text-muted-foreground">
-          {alerts.length} alerte{alerts.length > 1 ? "s" : ""} au total
+          {activeCount} active{activeCount > 1 ? "s" : ""} · {alerts.length} au total
         </p>
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
           <CardTitle className="text-base">Historique</CardTitle>
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterMode)}>
+            <TabsList>
+              <TabsTrigger value="active">Actives ({activeCount})</TabsTrigger>
+              <TabsTrigger value="all">Toutes ({alerts.length})</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </CardHeader>
         <CardContent>
-          {alerts.length === 0 ? (
+          {filtered.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              Aucune alerte enregistrée
+              {filter === "active" ? "Aucune alerte active" : "Aucune alerte enregistrée"}
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -51,8 +66,11 @@ export default function Alerts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {alerts.map((a) => (
-                    <TableRow key={a.id}>
+                  {filtered.map((a) => (
+                    <TableRow
+                      key={a.id}
+                      className={cn(!a.is_read && "bg-destructive/5")}
+                    >
                       <TableCell>
                         <Badge variant={a.type.includes("high") || a.type.includes("low") ? "destructive" : "secondary"}>
                           {a.type}
