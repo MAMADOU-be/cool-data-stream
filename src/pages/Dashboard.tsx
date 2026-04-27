@@ -49,7 +49,9 @@ function CircularBattery({ value }: { value: number | null }) {
 
 export default function Dashboard() {
   const { temperature, battery, voltage, alerts } = useFridgeData();
-  const activeAlerts = alerts.filter((a) => !a.is_read).length;
+  const activeAlertsList = alerts.filter((a) => !a.is_read);
+  const activeAlerts = activeAlertsList.length;
+  const activeTypes = Array.from(new Set(activeAlertsList.map((a) => a.type)));
 
   useEffect(() => {
     document.title = "Dashboard · Solar Fridge";
@@ -72,14 +74,21 @@ export default function Dashboard() {
           <p className="text-muted-foreground">État du frigo solaire en temps réel</p>
         </div>
         {activeAlerts > 0 && (
-          <Badge
-            variant="destructive"
-            className="gap-1.5 px-3 py-1.5 text-sm"
-            data-testid="alert-badge"
-          >
-            <AlertTriangle className="h-4 w-4" />
-            {activeAlerts} alerte{activeAlerts > 1 ? "s" : ""}
-          </Badge>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Badge
+              variant="destructive"
+              className="gap-1.5 px-3 py-1.5 text-sm"
+              data-testid="alert-badge"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              {activeAlerts} active{activeAlerts > 1 ? "s" : ""}
+            </Badge>
+            {activeTypes.map((t) => (
+              <Badge key={t} variant="outline" className="border-destructive/40 text-destructive">
+                {t}
+              </Badge>
+            ))}
+          </div>
         )}
       </div>
 
