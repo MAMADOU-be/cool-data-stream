@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFridgeData } from "@/hooks/useFridgeData";
+import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
