@@ -87,6 +87,7 @@ export default function Alerts() {
                         <Switch
                           checked={a.is_read}
                           onCheckedChange={() => toggleAlertRead(a.id, a.is_read)}
+                          disabled={!isAdmin}
                           aria-label="Marquer comme lu"
                         />
                       </TableCell>
