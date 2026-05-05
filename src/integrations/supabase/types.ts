@@ -16,30 +16,50 @@ export type Database = {
     Tables: {
       alerts: {
         Row: {
+          chambre_id: string | null
           created_at: string
+          etat: Database["public"]["Enums"]["alert_state"]
           id: string
           is_read: boolean
           message: string
+          seuil: number | null
           type: string
           user_id: string
+          valeur: number | null
         }
         Insert: {
+          chambre_id?: string | null
           created_at?: string
+          etat?: Database["public"]["Enums"]["alert_state"]
           id?: string
           is_read?: boolean
           message: string
+          seuil?: number | null
           type: string
           user_id: string
+          valeur?: number | null
         }
         Update: {
+          chambre_id?: string | null
           created_at?: string
+          etat?: Database["public"]["Enums"]["alert_state"]
           id?: string
           is_read?: boolean
           message?: string
+          seuil?: number | null
           type?: string
           user_id?: string
+          valeur?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "alerts_chambre_id_fkey"
+            columns: ["chambre_id"]
+            isOneToOne: false
+            referencedRelation: "chambres_froides"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       batteries: {
         Row: {
@@ -65,6 +85,138 @@ export type Database = {
         }
         Relationships: []
       }
+      batteries_solaires: {
+        Row: {
+          capacite_kwh: number
+          chambre_id: string
+          id: string
+          last_update: string
+          pourcentage: number
+          voltage: number
+        }
+        Insert: {
+          capacite_kwh?: number
+          chambre_id: string
+          id?: string
+          last_update?: string
+          pourcentage?: number
+          voltage?: number
+        }
+        Update: {
+          capacite_kwh?: number
+          chambre_id?: string
+          id?: string
+          last_update?: string
+          pourcentage?: number
+          voltage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batteries_solaires_chambre_id_fkey"
+            columns: ["chambre_id"]
+            isOneToOne: false
+            referencedRelation: "chambres_froides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capteurs: {
+        Row: {
+          actif: boolean
+          chambre_id: string
+          created_at: string
+          emplacement: string
+          id: string
+          type: Database["public"]["Enums"]["capteur_type"]
+        }
+        Insert: {
+          actif?: boolean
+          chambre_id: string
+          created_at?: string
+          emplacement: string
+          id?: string
+          type: Database["public"]["Enums"]["capteur_type"]
+        }
+        Update: {
+          actif?: boolean
+          chambre_id?: string
+          created_at?: string
+          emplacement?: string
+          id?: string
+          type?: Database["public"]["Enums"]["capteur_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capteurs_chambre_id_fkey"
+            columns: ["chambre_id"]
+            isOneToOne: false
+            referencedRelation: "chambres_froides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chambres_froides: {
+        Row: {
+          created_at: string
+          id: string
+          localisation: string
+          nom: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          localisation: string
+          nom: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          localisation?: string
+          nom?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      groupes_froids: {
+        Row: {
+          chambre_id: string
+          consommation_w: number
+          etat: boolean
+          id: string
+          last_update: string
+          nom: string
+          reference: string
+        }
+        Insert: {
+          chambre_id: string
+          consommation_w?: number
+          etat?: boolean
+          id?: string
+          last_update?: string
+          nom: string
+          reference?: string
+        }
+        Update: {
+          chambre_id?: string
+          consommation_w?: number
+          etat?: boolean
+          id?: string
+          last_update?: string
+          nom?: string
+          reference?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groupes_froids_chambre_id_fkey"
+            columns: ["chambre_id"]
+            isOneToOne: false
+            referencedRelation: "chambres_froides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurements: {
         Row: {
           id: string
@@ -88,6 +240,80 @@ export type Database = {
           voltage?: number
         }
         Relationships: []
+      }
+      mesures: {
+        Row: {
+          capteur_id: string
+          chambre_id: string
+          id: string
+          timestamp: string
+          type: Database["public"]["Enums"]["capteur_type"]
+          valeur: number
+        }
+        Insert: {
+          capteur_id: string
+          chambre_id: string
+          id?: string
+          timestamp?: string
+          type: Database["public"]["Enums"]["capteur_type"]
+          valeur: number
+        }
+        Update: {
+          capteur_id?: string
+          chambre_id?: string
+          id?: string
+          timestamp?: string
+          type?: Database["public"]["Enums"]["capteur_type"]
+          valeur?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mesures_capteur_id_fkey"
+            columns: ["capteur_id"]
+            isOneToOne: false
+            referencedRelation: "capteurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mesures_chambre_id_fkey"
+            columns: ["chambre_id"]
+            isOneToOne: false
+            referencedRelation: "chambres_froides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      panneaux_solaires: {
+        Row: {
+          chambre_id: string
+          id: string
+          last_update: string
+          nom: string
+          production_w: number
+        }
+        Insert: {
+          chambre_id: string
+          id?: string
+          last_update?: string
+          nom: string
+          production_w?: number
+        }
+        Update: {
+          chambre_id?: string
+          id?: string
+          last_update?: string
+          nom?: string
+          production_w?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panneaux_solaires_chambre_id_fkey"
+            columns: ["chambre_id"]
+            isOneToOne: false
+            referencedRelation: "chambres_froides"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -142,7 +368,9 @@ export type Database = {
       }
     }
     Enums: {
+      alert_state: "creee" | "active" | "lue" | "resolue"
       app_role: "admin" | "user" | "operateur" | "agriculteur"
+      capteur_type: "temperature" | "humidite" | "porte"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -270,7 +498,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      alert_state: ["creee", "active", "lue", "resolue"],
       app_role: ["admin", "user", "operateur", "agriculteur"],
+      capteur_type: ["temperature", "humidite", "porte"],
     },
   },
 } as const
