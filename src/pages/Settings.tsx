@@ -1,100 +1,73 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ShieldAlert } from "lucide-react";
+import { Info } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-const TEMP_THRESHOLD_KEY = "solar-fridge:temp-threshold";
-const NOTIF_KEY = "solar-fridge:notifications";
+const SIM_KEY = "doundeul:simulation-enabled";
 
 export default function Settings() {
-  const { role } = useAuth();
-  const isAdmin = role === "admin";
-  const [threshold, setThreshold] = useState<string>("5");
-  const [notifications, setNotifications] = useState(true);
+  const { role, user } = useAuth();
+  const [sim, setSim] = useState(true);
 
   useEffect(() => {
-    document.title = "Paramètres · Solar Fridge";
-    const t = localStorage.getItem(TEMP_THRESHOLD_KEY);
-    if (t) setThreshold(t);
-    const n = localStorage.getItem(NOTIF_KEY);
-    if (n !== null) setNotifications(n === "true");
+    document.title = "Paramètres · Doundeul Récolte";
+    setSim(localStorage.getItem(SIM_KEY) !== "false");
   }, []);
 
-  const handleSave = () => {
-    if (!isAdmin) {
-      toast.error("Réservé aux administrateurs");
-      return;
-    }
-    const v = parseFloat(threshold);
-    if (!Number.isFinite(v)) {
-      toast.error("Seuil de température invalide");
-      return;
-    }
-    localStorage.setItem(TEMP_THRESHOLD_KEY, String(v));
-    localStorage.setItem(NOTIF_KEY, String(notifications));
-    toast.success("Paramètres enregistrés");
+  const save = () => {
+    localStorage.setItem(SIM_KEY, String(sim));
+    toast.success("Préférences enregistrées. Rechargez pour appliquer.");
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
-        <p className="text-muted-foreground">Configurez vos seuils et préférences</p>
+        <p className="text-muted-foreground">Préférences de l'application</p>
       </div>
 
-      {!isAdmin && (
-        <Alert>
-          <ShieldAlert className="h-4 w-4" />
-          <AlertDescription>
-            Seuls les administrateurs peuvent modifier ces paramètres. Vue en lecture seule.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Connecté en tant que <strong>{user?.email}</strong> · rôle : <strong className="capitalize">{role}</strong>
+        </AlertDescription>
+      </Alert>
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-base">Seuils d'alerte</CardTitle>
+          <CardTitle className="text-base">Source des données</CardTitle>
           <CardDescription>
-            Une alerte est créée lorsque la température dépasse ce seuil.
+            Active la simulation locale des capteurs IoT (utile pour la démonstration en attendant le matériel réel).
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="threshold">Seuil de température (°C)</Label>
-            <Input
-              id="threshold"
-              type="number"
-              step="0.1"
-              value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
-              className="max-w-xs"
-              disabled={!isAdmin}
-            />
-            <p className="text-xs text-muted-foreground">Par défaut : 5 °C</p>
-          </div>
-
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="notif" className="text-base">Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                Recevoir des alertes visuelles dans l'application
-              </p>
+            <div>
+              <Label htmlFor="sim" className="text-base">Simulation des capteurs</Label>
+              <p className="text-sm text-muted-foreground">Génère des mesures réalistes toutes les 8 secondes</p>
             </div>
-            <Switch
-              id="notif"
-              checked={notifications}
-              onCheckedChange={setNotifications}
-              disabled={!isAdmin}
-            />
+            <Switch id="sim" checked={sim} onCheckedChange={setSim} />
           </div>
+          <Button onClick={save}>Enregistrer</Button>
+        </CardContent>
+      </Card>
 
-          <Button onClick={handleSave} disabled={!isAdmin}>Enregistrer</Button>
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-base">Seuils d'alerte (BF-06)</CardTitle>
+          <CardDescription>Définis dans le système</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm">
+            <li className="flex justify-between border-b pb-2"><span>Température maximale</span><strong>4 °C</strong></li>
+            <li className="flex justify-between border-b pb-2"><span>Niveau batterie minimum</span><strong>20 %</strong></li>
+            <li className="flex justify-between"><span>Porte ouverte (durée max)</span><strong>5 min</strong></li>
+          </ul>
         </CardContent>
       </Card>
     </div>

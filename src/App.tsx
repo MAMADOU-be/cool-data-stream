@@ -11,10 +11,20 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Alerts from "./pages/Alerts";
+import Historique from "./pages/Historique";
+import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const protectedRoute = (el: JSX.Element) => (
+  <ProtectedRoute>
+    <FridgeDataProvider>
+      <AppLayout>{el}</AppLayout>
+    </FridgeDataProvider>
+  </ProtectedRoute>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -26,42 +36,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <FridgeDataProvider>
-                    <AppLayout>
-                      <Dashboard />
-                    </AppLayout>
-                  </FridgeDataProvider>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/alerts"
-              element={
-                <ProtectedRoute>
-                  <FridgeDataProvider>
-                    <AppLayout>
-                      <Alerts />
-                    </AppLayout>
-                  </FridgeDataProvider>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <FridgeDataProvider>
-                    <AppLayout>
-                      <Settings />
-                    </AppLayout>
-                  </FridgeDataProvider>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/dashboard" element={protectedRoute(<Dashboard />)} />
+            <Route path="/historique" element={protectedRoute(<Historique />)} />
+            <Route path="/alerts" element={protectedRoute(<Alerts />)} />
+            <Route path="/admin" element={protectedRoute(<Admin />)} />
+            <Route path="/settings" element={protectedRoute(<Settings />)} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
