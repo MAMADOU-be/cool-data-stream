@@ -30,7 +30,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               <Sun className="h-5 w-5 text-secondary-foreground" />
             </div>
-            <span className="font-semibold tracking-tight">Solar Fridge</span>
+            <span className="font-semibold tracking-tight">Doundeul Récolte</span>
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
