@@ -206,7 +206,7 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     <FridgeContext.Provider value={{
       chambre, capteurs, groupes, panneaux, batterie,
       latestByCapteur, recentMesures, alerts,
-      tempMoyenne, humiditeMoyenne, porteOuverte,
+      tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
       productionTotale, consommationTotale,
       toggleGroupe, setAlertState, refresh,
     }}>
