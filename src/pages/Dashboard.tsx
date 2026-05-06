@@ -168,7 +168,9 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Sécurité incendie</CardTitle>
-            <CardDescription>Détecteurs de fumée (seuil critique 50 ppm)</CardDescription>
+            <CardDescription>
+              Détecteurs de fumée — vigilance &gt; {THRESHOLDS.fumee.warning} ppm, critique &gt; {THRESHOLDS.fumee.critical} ppm
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {fumeeCapteurs.length === 0 && (
@@ -176,8 +178,9 @@ export default function Dashboard() {
             )}
             {fumeeCapteurs.map((c) => {
               const v = latestByCapteur[c.id]?.valeur;
-              const danger = v !== undefined && v > 50;
-              const warn = v !== undefined && v > 20 && v <= 50;
+              const lvl = levelOf("fumee", v);
+              const danger = lvl === "critical";
+              const warn = lvl === "warning";
               return (
                 <div key={c.id} className={cn(
                   "flex items-center justify-between rounded-lg border p-3",
