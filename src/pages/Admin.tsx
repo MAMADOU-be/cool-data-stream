@@ -124,7 +124,7 @@ apikey: <publishable_key>
 
 {
   "capteur_id": "<uuid du capteur>",
-  "type": "temperature" | "humidite" | "porte",
+  "type": "temperature" | "humidite" | "porte" | "fumee",
   "valeur": 4.2
 }`}
           </pre>
