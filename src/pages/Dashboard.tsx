@@ -36,7 +36,7 @@ function StatCard({ icon: Icon, label, value, unit, tone = "default", sub }: any
 export default function Dashboard() {
   const {
     chambre, capteurs, latestByCapteur, groupes, panneaux, batterie,
-    tempMoyenne, humiditeMoyenne, porteOuverte,
+    tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
     productionTotale, consommationTotale, alerts, toggleGroupe,
   } = useFridgeData();
   const { isOperateur } = useAuth();
