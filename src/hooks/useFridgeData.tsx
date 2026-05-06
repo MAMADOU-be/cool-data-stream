@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback,
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-export type CapteurType = "temperature" | "humidite" | "porte";
+export type CapteurType = "temperature" | "humidite" | "porte" | "fumee";
 export type AlertEtat = "creee" | "active" | "lue" | "resolue";
 
 export interface Chambre { id: string; nom: string; localisation: string }
