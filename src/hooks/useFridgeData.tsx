@@ -116,7 +116,8 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         let valeur = 0;
         if (c.type === "temperature") valeur = +(s.temp + (Math.random() - 0.5) * 0.4).toFixed(2);
         else if (c.type === "humidite") valeur = +(s.humid + (Math.random() - 0.5) * 2).toFixed(1);
-        else valeur = Math.random() < 0.05 ? 1 : 0; // porte ouverte rarement
+        else if (c.type === "fumee") valeur = +(Math.random() * 15 + (Math.random() < 0.01 ? 200 : 0)).toFixed(1); // ppm, pic rare
+        else valeur = Math.random() < 0.05 ? 1 : 0; // porte
         return { capteur_id: c.id, chambre_id: c.chambre_id, type: c.type, valeur };
       });
       await supabase.from("mesures").insert(inserts);
