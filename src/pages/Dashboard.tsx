@@ -9,6 +9,7 @@ import {
   Thermometer, Droplets, Battery, Sun, Snowflake, AlertTriangle, DoorOpen, Zap, Power, Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { THRESHOLDS, levelOf } from "@/lib/thresholds";
 
 function StatCard({ icon: Icon, label, value, unit, tone = "default", sub }: any) {
   const tones: Record<string, string> = {
@@ -45,12 +46,13 @@ export default function Dashboard() {
 
   const actives = alerts.filter((a) => a.etat === "creee" || a.etat === "active");
 
-  const tempTone = tempMoyenne === null ? "default" : tempMoyenne > 4 ? "danger" : tempMoyenne < 0 ? "default" : "success";
-  const battTone = !batterie ? "default" : batterie.pourcentage < 20 ? "danger" : batterie.pourcentage < 50 ? "warning" : "success";
+  const toneMap = { ok: "success", warning: "warning", critical: "danger" } as const;
+  const tempTone = toneMap[levelOf("temperature", tempMoyenne)];
+  const battTone = toneMap[levelOf("batterie", batterie?.pourcentage ?? null)];
+  const fumeeTone = toneMap[levelOf("fumee", fumeeMax)];
   const tempCapteurs = capteurs.filter((c) => c.type === "temperature");
   const humidCapteurs = capteurs.filter((c) => c.type === "humidite");
   const fumeeCapteurs = capteurs.filter((c) => c.type === "fumee");
-  const fumeeTone = fumeeMax === null ? "default" : fumeeMax > 50 ? "danger" : fumeeMax > 20 ? "warning" : "success";
 
   return (
     <div className="space-y-6">
@@ -73,19 +75,19 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={Thermometer} label="Température moyenne" tone={tempTone}
                   value={tempMoyenne !== null ? tempMoyenne.toFixed(1) : "—"} unit="°C"
-                  sub={`Seuil : 4°C · ${tempCapteurs.length} capteurs`} />
+                  sub={`Vigilance > ${THRESHOLDS.temperature.warning}°C · Critique > ${THRESHOLDS.temperature.critical}°C · ${tempCapteurs.length} capteurs`} />
         <StatCard icon={Droplets} label="Humidité moyenne"
                   value={humiditeMoyenne !== null ? humiditeMoyenne.toFixed(0) : "—"} unit="%"
                   sub={`${humidCapteurs.length} capteurs muraux`} />
         <StatCard icon={Battery} label="Batterie solaire" tone={battTone}
                   value={batterie ? batterie.pourcentage.toFixed(0) : "—"} unit="%"
-                  sub={batterie ? `${batterie.voltage.toFixed(1)} V · ${batterie.capacite_kwh} kWh` : "—"} />
+                  sub={batterie ? `${batterie.voltage.toFixed(1)} V · vigilance < ${THRESHOLDS.batterie.warning}% · critique < ${THRESHOLDS.batterie.critical}%` : "—"} />
         <StatCard icon={Sun} label="Production solaire" tone="warning"
                   value={(productionTotale / 1000).toFixed(2)} unit="kW"
                   sub={`${panneaux.length} panneaux · 4 kWc installés`} />
         <StatCard icon={Flame} label="Détection fumée" tone={fumeeTone}
                   value={fumeeMax !== null ? fumeeMax.toFixed(0) : "—"} unit="ppm"
-                  sub={`Seuil critique : 50 ppm · ${fumeeCapteurs.length} détecteurs`} />
+                  sub={`Vigilance > ${THRESHOLDS.fumee.warning} ppm · Critique > ${THRESHOLDS.fumee.critical} ppm · ${fumeeCapteurs.length} détecteurs`} />
       </div>
 
       {/* Capteurs température détaillés */}
@@ -99,7 +101,7 @@ export default function Dashboard() {
             {tempCapteurs.map((c) => {
               const m = latestByCapteur[c.id];
               const v = m?.valeur;
-              const danger = v !== undefined && v > 4;
+              const danger = v !== undefined && v > THRESHOLDS.temperature.critical;
               return (
                 <div key={c.id}
                      className={cn("flex items-center justify-between rounded-lg border p-3",
@@ -166,7 +168,9 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Sécurité incendie</CardTitle>
-            <CardDescription>Détecteurs de fumée (seuil critique 50 ppm)</CardDescription>
+            <CardDescription>
+              Détecteurs de fumée — vigilance &gt; {THRESHOLDS.fumee.warning} ppm, critique &gt; {THRESHOLDS.fumee.critical} ppm
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {fumeeCapteurs.length === 0 && (
@@ -174,8 +178,9 @@ export default function Dashboard() {
             )}
             {fumeeCapteurs.map((c) => {
               const v = latestByCapteur[c.id]?.valeur;
-              const danger = v !== undefined && v > 50;
-              const warn = v !== undefined && v > 20 && v <= 50;
+              const lvl = levelOf("fumee", v);
+              const danger = lvl === "critical";
+              const warn = lvl === "warning";
               return (
                 <div key={c.id} className={cn(
                   "flex items-center justify-between rounded-lg border p-3",

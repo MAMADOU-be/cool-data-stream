@@ -41,7 +41,24 @@ Application de supervision IoT pour une **chambre froide alimentée en solaire**
 - **Température** : 3 capteurs (haut, milieu, bas)
 - **Humidité** : 3 capteurs (mur Est, Ouest, Nord)
 - **Porte** : 1 capteur d'ouverture
-- **Fumée** : **2 détecteurs** (plafond zone groupes froids, plafond zone stockage) — seuil critique **50 ppm**
+- **Fumée** : **2 détecteurs** (plafond zone groupes froids, plafond zone stockage)
+
+## Seuils métiers (source unique)
+
+Définis dans `src/lib/thresholds.ts` (front) et **mirorés à l'identique** dans `supabase/functions/ingest-sensor/index.ts` (backend).
+Toute modification doit être appliquée aux **deux fichiers + ce tableau**.
+
+| Grandeur     | Vigilance (UI orange) | Critique (UI rouge + alerte BDD) | Comparaison |
+|--------------|-----------------------|----------------------------------|-------------|
+| Température  | > 2 °C                | > 4 °C                           | supérieur à |
+| Humidité     | > 85 %                | > 90 %                           | supérieur à |
+| Porte        | > 2 min               | > 5 min                          | supérieur à |
+| **Fumée**    | **> 20 ppm**          | **> 50 ppm**                     | supérieur à |
+| Batterie     | < 50 %                | < 20 %                           | inférieur à |
+
+Comportement :
+- **Vigilance** : indication visuelle uniquement (StatCard / cartes capteurs en orange). L'edge function renvoie `niveau: "warning"` mais ne crée **pas** d'alerte en BDD.
+- **Critique** : UI rouge + insertion automatique d'une ligne dans `alerts` (état `active`), diffusée en temps réel via Supabase Realtime.
 
 ## Architecture
 

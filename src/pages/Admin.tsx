@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { THRESHOLDS } from "@/lib/thresholds";
 
 interface UserLine {
   id: string;
@@ -131,6 +132,42 @@ apikey: <publishable_key>
           <p className="mt-3 text-xs text-muted-foreground">
             Alternative : fournir <code>chambre_id</code>, <code>type</code> et <code>emplacement</code> pour résoudre automatiquement le capteur.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Réponse : <code>{`{ ok, niveau: "ok"|"warning"|"critical", alerte, seuils }`}</code>. Une alerte BDD est créée automatiquement uniquement au niveau <strong>critical</strong>.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Seuils métiers (source unique)</CardTitle>
+          <CardDescription>
+            Identiques côté front (<code>src/lib/thresholds.ts</code>), edge function (<code>ingest-sensor</code>) et règles d'alerte de la simulation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Grandeur</TableHead>
+                <TableHead>Vigilance</TableHead>
+                <TableHead>Critique</TableHead>
+                <TableHead>Comparaison</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(Object.entries(THRESHOLDS) as [string, typeof THRESHOLDS[keyof typeof THRESHOLDS]][]).map(([k, t]) => (
+                <TableRow key={k}>
+                  <TableCell className="font-medium capitalize">{k}</TableCell>
+                  <TableCell>{t.op === "gt" ? `> ${t.warning}` : `< ${t.warning}`} {t.unit}</TableCell>
+                  <TableCell className="text-destructive font-semibold">
+                    {t.op === "gt" ? `> ${t.critical}` : `< ${t.critical}`} {t.unit}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{t.op === "gt" ? "supérieur à" : "inférieur à"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
