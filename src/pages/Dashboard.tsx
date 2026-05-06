@@ -120,8 +120,8 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Capteurs humidité + porte */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Capteurs humidité + porte + fumée */}
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Capteurs d'humidité</CardTitle>
@@ -160,6 +160,40 @@ export default function Dashboard() {
                 {porteOuverte === null ? "—" : porteOuverte === 1 ? "Ouverte" : "Fermée"}
               </Badge>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sécurité incendie</CardTitle>
+            <CardDescription>Détecteurs de fumée (seuil critique 50 ppm)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {fumeeCapteurs.length === 0 && (
+              <p className="text-sm text-muted-foreground">Aucun détecteur installé.</p>
+            )}
+            {fumeeCapteurs.map((c) => {
+              const v = latestByCapteur[c.id]?.valeur;
+              const danger = v !== undefined && v > 50;
+              const warn = v !== undefined && v > 20 && v <= 50;
+              return (
+                <div key={c.id} className={cn(
+                  "flex items-center justify-between rounded-lg border p-3",
+                  danger && "border-destructive/40 bg-destructive/5",
+                  warn && "border-warning/40 bg-warning/10",
+                )}>
+                  <div className="flex items-center gap-2">
+                    <Flame className={cn("h-4 w-4",
+                      danger ? "text-destructive" : warn ? "text-warning" : "text-muted-foreground")} />
+                    <span className="text-sm">{c.emplacement}</span>
+                  </div>
+                  <span className={cn("font-semibold",
+                    danger ? "text-destructive" : warn ? "text-warning" : "text-foreground")}>
+                    {v !== undefined ? `${v.toFixed(0)} ppm` : "—"}
+                  </span>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       </div>
