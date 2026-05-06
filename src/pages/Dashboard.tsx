@@ -75,19 +75,19 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={Thermometer} label="Température moyenne" tone={tempTone}
                   value={tempMoyenne !== null ? tempMoyenne.toFixed(1) : "—"} unit="°C"
-                  sub={`Seuil : 4°C · ${tempCapteurs.length} capteurs`} />
+                  sub={`Vigilance > ${THRESHOLDS.temperature.warning}°C · Critique > ${THRESHOLDS.temperature.critical}°C · ${tempCapteurs.length} capteurs`} />
         <StatCard icon={Droplets} label="Humidité moyenne"
                   value={humiditeMoyenne !== null ? humiditeMoyenne.toFixed(0) : "—"} unit="%"
                   sub={`${humidCapteurs.length} capteurs muraux`} />
         <StatCard icon={Battery} label="Batterie solaire" tone={battTone}
                   value={batterie ? batterie.pourcentage.toFixed(0) : "—"} unit="%"
-                  sub={batterie ? `${batterie.voltage.toFixed(1)} V · ${batterie.capacite_kwh} kWh` : "—"} />
+                  sub={batterie ? `${batterie.voltage.toFixed(1)} V · vigilance < ${THRESHOLDS.batterie.warning}% · critique < ${THRESHOLDS.batterie.critical}%` : "—"} />
         <StatCard icon={Sun} label="Production solaire" tone="warning"
                   value={(productionTotale / 1000).toFixed(2)} unit="kW"
                   sub={`${panneaux.length} panneaux · 4 kWc installés`} />
         <StatCard icon={Flame} label="Détection fumée" tone={fumeeTone}
                   value={fumeeMax !== null ? fumeeMax.toFixed(0) : "—"} unit="ppm"
-                  sub={`Seuil critique : 50 ppm · ${fumeeCapteurs.length} détecteurs`} />
+                  sub={`Vigilance > ${THRESHOLDS.fumee.warning} ppm · Critique > ${THRESHOLDS.fumee.critical} ppm · ${fumeeCapteurs.length} détecteurs`} />
       </div>
 
       {/* Capteurs température détaillés */}
