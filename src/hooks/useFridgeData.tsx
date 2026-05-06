@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { THRESHOLDS } from "@/lib/thresholds";
 
 export type CapteurType = "temperature" | "humidite" | "porte" | "fumee";
 export type AlertEtat = "creee" | "active" | "lue" | "resolue";
