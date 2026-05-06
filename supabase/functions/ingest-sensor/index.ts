@@ -66,6 +66,9 @@ Deno.serve(async (req) => {
     if (type === "porte" && valeur > 5) {
       alerte = { type: "porte_ouverte", message: `Porte ouverte depuis ${valeur} min`, seuil: 5 };
     }
+    if (type === "fumee" && valeur > 50) {
+      alerte = { type: "fumee_detectee", message: `🔥 Fumée détectée : ${valeur} ppm — risque incendie`, seuil: 50 };
+    }
 
     if (alerte) {
       await supabase.from("alerts").insert({
