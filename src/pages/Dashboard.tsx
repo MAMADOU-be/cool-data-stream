@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  Thermometer, Droplets, Battery, Sun, Snowflake, AlertTriangle, DoorOpen, Zap, Power
+  Thermometer, Droplets, Battery, Sun, Snowflake, AlertTriangle, DoorOpen, Zap, Power, Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
