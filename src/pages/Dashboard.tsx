@@ -70,7 +70,7 @@ export default function Dashboard() {
       </div>
 
       {/* Métriques principales */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={Thermometer} label="Température moyenne" tone={tempTone}
                   value={tempMoyenne !== null ? tempMoyenne.toFixed(1) : "—"} unit="°C"
                   sub={`Seuil : 4°C · ${tempCapteurs.length} capteurs`} />
@@ -83,6 +83,9 @@ export default function Dashboard() {
         <StatCard icon={Sun} label="Production solaire" tone="warning"
                   value={(productionTotale / 1000).toFixed(2)} unit="kW"
                   sub={`${panneaux.length} panneaux · 4 kWc installés`} />
+        <StatCard icon={Flame} label="Détection fumée" tone={fumeeTone}
+                  value={fumeeMax !== null ? fumeeMax.toFixed(0) : "—"} unit="ppm"
+                  sub={`Seuil critique : 50 ppm · ${fumeeCapteurs.length} détecteurs`} />
       </div>
 
       {/* Capteurs température détaillés */}
