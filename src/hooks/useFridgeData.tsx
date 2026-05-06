@@ -184,6 +184,10 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     : null;
   const porteCapteur = capteurs.find((c) => c.type === "porte");
   const porteOuverte = porteCapteur ? latestByCapteur[porteCapteur.id]?.valeur ?? 0 : null;
+  const fumeeCapteurs = capteurs.filter((c) => c.type === "fumee");
+  const fumeeMax = fumeeCapteurs.length
+    ? Math.max(0, ...fumeeCapteurs.map((c) => latestByCapteur[c.id]?.valeur ?? 0))
+    : null;
   const productionTotale = panneaux.reduce((a, p) => a + p.production_w, 0);
   const consommationTotale = groupes.filter((g) => g.etat).reduce((a, g) => a + g.consommation_w, 0);
 
