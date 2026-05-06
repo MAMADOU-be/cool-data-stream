@@ -140,25 +140,25 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
           .update({ production_w: prod, last_update: new Date().toISOString() }).eq("id", p.id);
       }
 
-      // alertes seuils (BF-06)
+      // alertes seuils (BF-06) — seuils centralisés dans src/lib/thresholds.ts
       const alertes: any[] = [];
       const tempMoy = s.temp;
-      if (tempMoy > 4) alertes.push({
+      if (tempMoy > THRESHOLDS.temperature.critical) alertes.push({
         user_id: user.id, type: "temperature_high",
-        message: `Température ${tempMoy.toFixed(1)}°C dépasse le seuil de 4°C`,
-        valeur: +tempMoy.toFixed(2), seuil: 4, chambre_id: chambre.id, etat: "active",
+        message: `Température ${tempMoy.toFixed(1)}°C dépasse le seuil de ${THRESHOLDS.temperature.critical}°C`,
+        valeur: +tempMoy.toFixed(2), seuil: THRESHOLDS.temperature.critical, chambre_id: chambre.id, etat: "active",
       });
-      if (s.batt < 20) alertes.push({
+      if (s.batt < THRESHOLDS.batterie.critical) alertes.push({
         user_id: user.id, type: "battery_low",
-        message: `Batterie faible : ${s.batt.toFixed(0)}%`,
-        valeur: +s.batt.toFixed(1), seuil: 20, chambre_id: chambre.id, etat: "active",
+        message: `Batterie faible : ${s.batt.toFixed(0)}% (< ${THRESHOLDS.batterie.critical}%)`,
+        valeur: +s.batt.toFixed(1), seuil: THRESHOLDS.batterie.critical, chambre_id: chambre.id, etat: "active",
       });
-      // Détection fumée : seuil critique 50 ppm
-      const fumeeMax = Math.max(0, ...inserts.filter((i) => i.type === "fumee").map((i) => i.valeur));
-      if (fumeeMax > 50) alertes.push({
+      // Détection fumée : seuil critique
+      const fumeeMaxTick = Math.max(0, ...inserts.filter((i) => i.type === "fumee").map((i) => i.valeur));
+      if (fumeeMaxTick > THRESHOLDS.fumee.critical) alertes.push({
         user_id: user.id, type: "fumee_detectee",
-        message: `🔥 Fumée détectée : ${fumeeMax.toFixed(0)} ppm — risque incendie`,
-        valeur: fumeeMax, seuil: 50, chambre_id: chambre.id, etat: "active",
+        message: `🔥 Fumée détectée : ${fumeeMaxTick.toFixed(0)} ppm — risque incendie (seuil ${THRESHOLDS.fumee.critical} ppm)`,
+        valeur: fumeeMaxTick, seuil: THRESHOLDS.fumee.critical, chambre_id: chambre.id, etat: "active",
       });
       if (alertes.length) {
         // éviter spam : ne créer qu'une alerte du même type par 2 min
