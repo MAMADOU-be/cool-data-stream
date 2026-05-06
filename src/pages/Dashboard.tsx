@@ -46,12 +46,13 @@ export default function Dashboard() {
 
   const actives = alerts.filter((a) => a.etat === "creee" || a.etat === "active");
 
-  const tempTone = tempMoyenne === null ? "default" : tempMoyenne > 4 ? "danger" : tempMoyenne < 0 ? "default" : "success";
-  const battTone = !batterie ? "default" : batterie.pourcentage < 20 ? "danger" : batterie.pourcentage < 50 ? "warning" : "success";
+  const toneMap = { ok: "success", warning: "warning", critical: "danger" } as const;
+  const tempTone = toneMap[levelOf("temperature", tempMoyenne)];
+  const battTone = toneMap[levelOf("batterie", batterie?.pourcentage ?? null)];
+  const fumeeTone = toneMap[levelOf("fumee", fumeeMax)];
   const tempCapteurs = capteurs.filter((c) => c.type === "temperature");
   const humidCapteurs = capteurs.filter((c) => c.type === "humidite");
   const fumeeCapteurs = capteurs.filter((c) => c.type === "fumee");
-  const fumeeTone = fumeeMax === null ? "default" : fumeeMax > 50 ? "danger" : fumeeMax > 20 ? "warning" : "success";
 
   return (
     <div className="space-y-6">
