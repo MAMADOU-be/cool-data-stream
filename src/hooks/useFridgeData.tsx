@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback,
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-export type CapteurType = "temperature" | "humidite" | "porte";
+export type CapteurType = "temperature" | "humidite" | "porte" | "fumee";
 export type AlertEtat = "creee" | "active" | "lue" | "resolue";
 
 export interface Chambre { id: string; nom: string; localisation: string }
@@ -29,6 +29,7 @@ interface Ctx {
   tempMoyenne: number | null;
   humiditeMoyenne: number | null;
   porteOuverte: number | null;
+  fumeeMax: number | null;
   productionTotale: number;
   consommationTotale: number;
   // actions
@@ -116,7 +117,8 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         let valeur = 0;
         if (c.type === "temperature") valeur = +(s.temp + (Math.random() - 0.5) * 0.4).toFixed(2);
         else if (c.type === "humidite") valeur = +(s.humid + (Math.random() - 0.5) * 2).toFixed(1);
-        else valeur = Math.random() < 0.05 ? 1 : 0; // porte ouverte rarement
+        else if (c.type === "fumee") valeur = +(Math.random() * 15 + (Math.random() < 0.01 ? 200 : 0)).toFixed(1); // ppm, pic rare
+        else valeur = Math.random() < 0.05 ? 1 : 0; // porte
         return { capteur_id: c.id, chambre_id: c.chambre_id, type: c.type, valeur };
       });
       await supabase.from("mesures").insert(inserts);
@@ -151,6 +153,13 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         message: `Batterie faible : ${s.batt.toFixed(0)}%`,
         valeur: +s.batt.toFixed(1), seuil: 20, chambre_id: chambre.id, etat: "active",
       });
+      // Détection fumée : seuil critique 50 ppm
+      const fumeeMax = Math.max(0, ...inserts.filter((i) => i.type === "fumee").map((i) => i.valeur));
+      if (fumeeMax > 50) alertes.push({
+        user_id: user.id, type: "fumee_detectee",
+        message: `🔥 Fumée détectée : ${fumeeMax.toFixed(0)} ppm — risque incendie`,
+        valeur: fumeeMax, seuil: 50, chambre_id: chambre.id, etat: "active",
+      });
       if (alertes.length) {
         // éviter spam : ne créer qu'une alerte du même type par 2 min
         const recent = alerts.filter((a) => Date.now() - new Date(a.created_at).getTime() < 120_000);
@@ -176,6 +185,10 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     : null;
   const porteCapteur = capteurs.find((c) => c.type === "porte");
   const porteOuverte = porteCapteur ? latestByCapteur[porteCapteur.id]?.valeur ?? 0 : null;
+  const fumeeCapteurs = capteurs.filter((c) => c.type === "fumee");
+  const fumeeMax = fumeeCapteurs.length
+    ? Math.max(0, ...fumeeCapteurs.map((c) => latestByCapteur[c.id]?.valeur ?? 0))
+    : null;
   const productionTotale = panneaux.reduce((a, p) => a + p.production_w, 0);
   const consommationTotale = groupes.filter((g) => g.etat).reduce((a, g) => a + g.consommation_w, 0);
 
@@ -193,7 +206,7 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     <FridgeContext.Provider value={{
       chambre, capteurs, groupes, panneaux, batterie,
       latestByCapteur, recentMesures, alerts,
-      tempMoyenne, humiditeMoyenne, porteOuverte,
+      tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
       productionTotale, consommationTotale,
       toggleGroupe, setAlertState, refresh,
     }}>

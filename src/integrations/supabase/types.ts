@@ -370,7 +370,7 @@ export type Database = {
     Enums: {
       alert_state: "creee" | "active" | "lue" | "resolue"
       app_role: "admin" | "user" | "operateur" | "agriculteur"
-      capteur_type: "temperature" | "humidite" | "porte"
+      capteur_type: "temperature" | "humidite" | "porte" | "fumee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -500,7 +500,7 @@ export const Constants = {
     Enums: {
       alert_state: ["creee", "active", "lue", "resolue"],
       app_role: ["admin", "user", "operateur", "agriculteur"],
-      capteur_type: ["temperature", "humidite", "porte"],
+      capteur_type: ["temperature", "humidite", "porte", "fumee"],
     },
   },
 } as const

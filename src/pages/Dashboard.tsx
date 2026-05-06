@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  Thermometer, Droplets, Battery, Sun, Snowflake, AlertTriangle, DoorOpen, Zap, Power
+  Thermometer, Droplets, Battery, Sun, Snowflake, AlertTriangle, DoorOpen, Zap, Power, Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,7 @@ function StatCard({ icon: Icon, label, value, unit, tone = "default", sub }: any
 export default function Dashboard() {
   const {
     chambre, capteurs, latestByCapteur, groupes, panneaux, batterie,
-    tempMoyenne, humiditeMoyenne, porteOuverte,
+    tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
     productionTotale, consommationTotale, alerts, toggleGroupe,
   } = useFridgeData();
   const { isOperateur } = useAuth();
@@ -49,6 +49,8 @@ export default function Dashboard() {
   const battTone = !batterie ? "default" : batterie.pourcentage < 20 ? "danger" : batterie.pourcentage < 50 ? "warning" : "success";
   const tempCapteurs = capteurs.filter((c) => c.type === "temperature");
   const humidCapteurs = capteurs.filter((c) => c.type === "humidite");
+  const fumeeCapteurs = capteurs.filter((c) => c.type === "fumee");
+  const fumeeTone = fumeeMax === null ? "default" : fumeeMax > 50 ? "danger" : fumeeMax > 20 ? "warning" : "success";
 
   return (
     <div className="space-y-6">
@@ -68,7 +70,7 @@ export default function Dashboard() {
       </div>
 
       {/* Métriques principales */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={Thermometer} label="Température moyenne" tone={tempTone}
                   value={tempMoyenne !== null ? tempMoyenne.toFixed(1) : "—"} unit="°C"
                   sub={`Seuil : 4°C · ${tempCapteurs.length} capteurs`} />
@@ -81,6 +83,9 @@ export default function Dashboard() {
         <StatCard icon={Sun} label="Production solaire" tone="warning"
                   value={(productionTotale / 1000).toFixed(2)} unit="kW"
                   sub={`${panneaux.length} panneaux · 4 kWc installés`} />
+        <StatCard icon={Flame} label="Détection fumée" tone={fumeeTone}
+                  value={fumeeMax !== null ? fumeeMax.toFixed(0) : "—"} unit="ppm"
+                  sub={`Seuil critique : 50 ppm · ${fumeeCapteurs.length} détecteurs`} />
       </div>
 
       {/* Capteurs température détaillés */}
@@ -115,8 +120,8 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Capteurs humidité + porte */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Capteurs humidité + porte + fumée */}
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Capteurs d'humidité</CardTitle>
@@ -155,6 +160,40 @@ export default function Dashboard() {
                 {porteOuverte === null ? "—" : porteOuverte === 1 ? "Ouverte" : "Fermée"}
               </Badge>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sécurité incendie</CardTitle>
+            <CardDescription>Détecteurs de fumée (seuil critique 50 ppm)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {fumeeCapteurs.length === 0 && (
+              <p className="text-sm text-muted-foreground">Aucun détecteur installé.</p>
+            )}
+            {fumeeCapteurs.map((c) => {
+              const v = latestByCapteur[c.id]?.valeur;
+              const danger = v !== undefined && v > 50;
+              const warn = v !== undefined && v > 20 && v <= 50;
+              return (
+                <div key={c.id} className={cn(
+                  "flex items-center justify-between rounded-lg border p-3",
+                  danger && "border-destructive/40 bg-destructive/5",
+                  warn && "border-warning/40 bg-warning/10",
+                )}>
+                  <div className="flex items-center gap-2">
+                    <Flame className={cn("h-4 w-4",
+                      danger ? "text-destructive" : warn ? "text-warning" : "text-muted-foreground")} />
+                    <span className="text-sm">{c.emplacement}</span>
+                  </div>
+                  <span className={cn("font-semibold",
+                    danger ? "text-destructive" : warn ? "text-warning" : "text-foreground")}>
+                    {v !== undefined ? `${v.toFixed(0)} ppm` : "—"}
+                  </span>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       </div>
