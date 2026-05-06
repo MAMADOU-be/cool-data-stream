@@ -152,6 +152,13 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         message: `Batterie faible : ${s.batt.toFixed(0)}%`,
         valeur: +s.batt.toFixed(1), seuil: 20, chambre_id: chambre.id, etat: "active",
       });
+      // Détection fumée : seuil critique 50 ppm
+      const fumeeMax = Math.max(0, ...inserts.filter((i) => i.type === "fumee").map((i) => i.valeur));
+      if (fumeeMax > 50) alertes.push({
+        user_id: user.id, type: "fumee_detectee",
+        message: `🔥 Fumée détectée : ${fumeeMax.toFixed(0)} ppm — risque incendie`,
+        valeur: fumeeMax, seuil: 50, chambre_id: chambre.id, etat: "active",
+      });
       if (alertes.length) {
         // éviter spam : ne créer qu'une alerte du même type par 2 min
         const recent = alerts.filter((a) => Date.now() - new Date(a.created_at).getTime() < 120_000);
