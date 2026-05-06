@@ -101,7 +101,7 @@ export default function Dashboard() {
             {tempCapteurs.map((c) => {
               const m = latestByCapteur[c.id];
               const v = m?.valeur;
-              const danger = v !== undefined && v > 4;
+              const danger = v !== undefined && v > THRESHOLDS.temperature.critical;
               return (
                 <div key={c.id}
                      className={cn("flex items-center justify-between rounded-lg border p-3",
