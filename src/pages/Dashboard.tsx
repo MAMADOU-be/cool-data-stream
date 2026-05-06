@@ -9,6 +9,7 @@ import {
   Thermometer, Droplets, Battery, Sun, Snowflake, AlertTriangle, DoorOpen, Zap, Power, Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { THRESHOLDS, levelOf } from "@/lib/thresholds";
 
 function StatCard({ icon: Icon, label, value, unit, tone = "default", sub }: any) {
   const tones: Record<string, string> = {
