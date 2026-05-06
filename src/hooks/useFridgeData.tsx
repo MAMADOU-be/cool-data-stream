@@ -29,6 +29,7 @@ interface Ctx {
   tempMoyenne: number | null;
   humiditeMoyenne: number | null;
   porteOuverte: number | null;
+  fumeeMax: number | null;
   productionTotale: number;
   consommationTotale: number;
   // actions
