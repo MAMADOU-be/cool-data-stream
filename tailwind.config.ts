@@ -78,16 +78,6 @@ export default {
         glow: 'var(--shadow-glow)',
         card: 'var(--shadow-card)',
       },
-      colors: {
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
-        },
-      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
