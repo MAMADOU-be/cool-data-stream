@@ -11,24 +11,29 @@ import {
 import { cn } from "@/lib/utils";
 import { THRESHOLDS, levelOf } from "@/lib/thresholds";
 
-function StatCard({ icon: Icon, label, value, unit, tone = "default", sub }: any) {
-  const tones: Record<string, string> = {
-    default: "text-primary",
-    success: "text-success",
-    warning: "text-warning",
-    danger: "text-destructive",
+function StatCard({ icon: Icon, label, value, unit, tone = "default", sub, accent }: any) {
+  const tones: Record<string, { text: string; ring: string; bg: string }> = {
+    default: { text: "text-primary", ring: "ring-primary/20", bg: "bg-primary/10" },
+    success: { text: "text-success", ring: "ring-success/20", bg: "bg-success/10" },
+    warning: { text: "text-warning", ring: "ring-warning/20", bg: "bg-warning/10" },
+    danger:  { text: "text-destructive", ring: "ring-destructive/30", bg: "bg-destructive/10" },
   };
+  const t = tones[tone];
   return (
-    <Card>
+    <Card className="group hover-lift">
+      <div className={cn("absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent", tone === "danger" ? "via-destructive/60" : tone === "warning" ? "via-warning/60" : tone === "success" ? "via-success/60" : "via-primary/60")} />
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-        <Icon className={cn("h-5 w-5", tones[tone])} />
+        <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</CardTitle>
+        <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl ring-1", t.bg, t.ring)}>
+          <Icon className={cn("h-4 w-4", t.text)} />
+        </div>
       </CardHeader>
       <CardContent>
-        <div className={cn("text-3xl font-bold", tones[tone])}>
-          {value} <span className="text-base font-normal text-muted-foreground">{unit}</span>
+        <div className="flex items-baseline gap-1.5">
+          <span className={cn("font-display text-3xl font-bold tabular-nums tracking-tight", t.text)}>{value}</span>
+          <span className="text-sm font-medium text-muted-foreground">{unit}</span>
         </div>
-        {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+        {sub && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{sub}</p>}
       </CardContent>
     </Card>
   );
@@ -55,20 +60,33 @@ export default function Dashboard() {
   const fumeeCapteurs = capteurs.filter((c) => c.type === "fumee");
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tableau de bord</h1>
-          <p className="text-muted-foreground">
-            {chambre ? `${chambre.nom} · ${chambre.localisation}` : "Chargement..."}
-          </p>
+    <div className="space-y-8">
+      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/40 p-6 shadow-card backdrop-blur-xl sm:p-8">
+        <div aria-hidden className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
+        <div aria-hidden className="absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-gradient-solar opacity-15 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              Système en ligne · temps réel
+            </div>
+            <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
+              <span className="text-gradient-primary">Tableau de bord</span>
+            </h1>
+            <p className="mt-1 text-muted-foreground">
+              {chambre ? `${chambre.nom} · ${chambre.localisation}` : "Chargement..."}
+            </p>
+          </div>
+          {actives.length > 0 && (
+            <Badge variant="destructive" className="gap-1.5 rounded-full px-3 py-1.5 text-sm shadow-elegant animate-pulse-glow">
+              <AlertTriangle className="h-4 w-4" />
+              {actives.length} alerte{actives.length > 1 ? "s" : ""} active{actives.length > 1 ? "s" : ""}
+            </Badge>
+          )}
         </div>
-        {actives.length > 0 && (
-          <Badge variant="destructive" className="gap-1.5 px-3 py-1.5 text-sm">
-            <AlertTriangle className="h-4 w-4" />
-            {actives.length} alerte{actives.length > 1 ? "s" : ""} active{actives.length > 1 ? "s" : ""}
-          </Badge>
-        )}
       </div>
 
       {/* Métriques principales */}
