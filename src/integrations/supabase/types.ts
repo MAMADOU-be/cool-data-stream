@@ -24,7 +24,7 @@ export type Database = {
           message: string
           seuil: number | null
           type: string
-          user_id: string
+          user_id: string | null
           valeur: number | null
         }
         Insert: {
@@ -36,7 +36,7 @@ export type Database = {
           message: string
           seuil?: number | null
           type: string
-          user_id: string
+          user_id?: string | null
           valeur?: number | null
         }
         Update: {
@@ -48,7 +48,7 @@ export type Database = {
           message?: string
           seuil?: number | null
           type?: string
-          user_id?: string
+          user_id?: string | null
           valeur?: number | null
         }
         Relationships: [
