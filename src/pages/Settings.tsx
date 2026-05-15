@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
 
 const SIM_KEY = "doundeul:simulation-enabled";
 
 export default function Settings() {
-  const { role, user } = useAuth();
   const [sim, setSim] = useState(true);
 
   useEffect(() => {
@@ -34,7 +32,7 @@ export default function Settings() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          Connecté en tant que <strong>{user?.email}</strong> · rôle : <strong className="capitalize">{role}</strong>
+          🔓 Authentification temporairement désactivée — accès libre à toutes les fonctionnalités.
         </AlertDescription>
       </Alert>
 

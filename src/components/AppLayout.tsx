@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bell, Settings, LogOut, Sun, History, Users, Moon, Leaf } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { LayoutDashboard, Bell, Settings, Sun, History, Users, Moon, Leaf } from "lucide-react";
 import { useFridgeData } from "@/hooks/useFridgeData";
 import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { cn } from "@/lib/utils";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const { signOut, user, role, isAdmin } = useAuth();
   const { alerts } = useFridgeData();
   const { theme, toggle } = useTheme();
   const actives = alerts.filter((a) => a.etat === "creee" || a.etat === "active").length;
@@ -19,7 +17,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/historique", label: "Historique", icon: History },
     { to: "/alerts", label: "Alertes", icon: Bell, badge: actives },
-    ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: Users }] : []),
+    { to: "/admin", label: "Admin", icon: Users },
     { to: "/settings", label: "Paramètres", icon: Settings },
   ];
 
@@ -75,14 +73,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2">
-            <div className="hidden text-right text-xs sm:block">
-              <div className="font-medium">{user?.email}</div>
-              <div className="flex items-center justify-end gap-1.5">
-                <Badge variant={isAdmin ? "default" : "secondary"} className="h-5 px-1.5 text-[10px] capitalize">
-                  {role ?? "user"}
-                </Badge>
-              </div>
-            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -91,9 +81,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               className="rounded-full"
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} aria-label="Se déconnecter" className="rounded-full">
-              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
