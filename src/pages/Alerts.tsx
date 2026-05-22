@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, RotateCcw, Bell, BellOff, CheckCircle2, Clock, ShieldAlert } from "lucide-react";
+import { AlertTriangle, RotateCcw, Bell, BellOff, CheckCircle2, Clock, ShieldAlert, Flame, Battery } from "lucide-react";
 
 const etatConfig: Record<AlertEtat, { label: string; variant: "destructive" | "secondary" | "outline" | "default"; icon: typeof AlertTriangle }> = {
   creee:   { label: "Créée",   variant: "destructive", icon: Bell },
