@@ -204,6 +204,13 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     await supabase.from("alerts").update({ etat, is_read: etat === "lue" || etat === "resolue" }).eq("id", id);
   };
 
+  const resetAllAlerts = async () => {
+    const activeIds = alerts.filter((a) => a.etat === "creee" || a.etat === "active").map((a) => a.id);
+    if (!activeIds.length) return;
+    setAlerts((p) => p.map((a) => activeIds.includes(a.id) ? { ...a, etat: "resolue" as AlertEtat, is_read: true } : a));
+    await supabase.from("alerts").update({ etat: "resolue", is_read: true }).in("id", activeIds);
+  };
+
   return (
     <FridgeContext.Provider value={{
       chambre, capteurs, groupes, panneaux, batterie,
