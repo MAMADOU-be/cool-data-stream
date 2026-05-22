@@ -36,6 +36,7 @@ interface Ctx {
   // actions
   toggleGroupe: (id: string, etat: boolean) => Promise<void>;
   setAlertState: (id: string, etat: AlertEtat) => Promise<void>;
+  resetAllAlerts: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
