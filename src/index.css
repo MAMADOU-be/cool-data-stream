@@ -186,6 +186,19 @@
     -webkit-text-fill-color: transparent;
     color: transparent;
   }
+  .text-gradient-destructive {
+    background: linear-gradient(135deg, hsl(var(--destructive)), hsl(0 80% 70%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .bg-gradient-destructive {
+    background: linear-gradient(135deg, hsl(var(--destructive) / 0.30), hsl(0 80% 70% / 1));
+  }
+  .bg-gradient-warning {
+    background: linear-gradient(135deg, hsl(var(--warning) / 0.25), hsl(20 90% 58% / 1));
+  }
   .ring-glow {
     box-shadow: var(--shadow-glow);
   }
