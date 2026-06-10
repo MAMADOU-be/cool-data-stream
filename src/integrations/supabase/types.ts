@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           chambre_id: string | null
           created_at: string
+          email_sent_at: string | null
           etat: Database["public"]["Enums"]["alert_state"]
           id: string
           is_read: boolean
@@ -30,6 +31,7 @@ export type Database = {
         Insert: {
           chambre_id?: string | null
           created_at?: string
+          email_sent_at?: string | null
           etat?: Database["public"]["Enums"]["alert_state"]
           id?: string
           is_read?: boolean
@@ -42,6 +44,7 @@ export type Database = {
         Update: {
           chambre_id?: string | null
           created_at?: string
+          email_sent_at?: string | null
           etat?: Database["public"]["Enums"]["alert_state"]
           id?: string
           is_read?: boolean
