@@ -14,6 +14,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
   const actives = alerts.filter((a) => a.etat === "creee" || a.etat === "active").length;
 
+  // Débloque l'audio dès la première interaction (politique navigateur).
+  useEffect(() => {
+    const onFirst = () => { unlockAudio(); window.removeEventListener("pointerdown", onFirst); };
+    window.addEventListener("pointerdown", onFirst, { once: true });
+    return () => window.removeEventListener("pointerdown", onFirst);
+  }, []);
+
+
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/historique", label: "Historique", icon: History },
