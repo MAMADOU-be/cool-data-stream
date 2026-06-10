@@ -214,6 +214,27 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
   const productionTotale = panneaux.reduce((a, p) => a + p.production_w, 0);
   const consommationTotale = groupes.filter((g) => g.etat).reduce((a, g) => a + g.consommation_w, 0);
 
+  // 🔔 Sonnerie de vigilance (orange) : seuils dépassés sans atteindre le critique.
+  // Les alertes critiques sont jouées via le canal realtime (INSERT). Anti-doublon par type.
+  const lastWarnRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    const now = Date.now();
+    const checks: Array<[ThresholdKey, number | null]> = [
+      ["temperature", tempMoyenne],
+      ["humidite", humiditeMoyenne],
+      ["fumee", fumeeMax],
+      ["batterie", batterie?.pourcentage ?? null],
+    ];
+    for (const [k, v] of checks) {
+      if (v == null) continue;
+      if (levelOf(k, v) !== "warning") continue;
+      const last = lastWarnRef.current[k] ?? 0;
+      if (now - last < 15 * 60_000) continue; // anti-spam 15 min
+      lastWarnRef.current[k] = now;
+      playWarning();
+    }
+  }, [tempMoyenne, humiditeMoyenne, fumeeMax, batterie?.pourcentage]);
+
   const toggleGroupe = async (id: string, etat: boolean) => {
     setGroupes((p) => p.map((g) => g.id === id ? { ...g, etat } : g));
     await supabase.from("groupes_froids").update({ etat, last_update: new Date().toISOString() }).eq("id", id);
