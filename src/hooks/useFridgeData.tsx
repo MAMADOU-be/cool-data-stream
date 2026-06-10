@@ -93,7 +93,26 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     const ch = supabase
       .channel("doundeul-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "alerts" }, () => refresh())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "alerts" }, (payload: any) => {
+        const a = payload.new as AlertRow;
+        // 🔔 Sonnerie : vigilance (warning) ou critique
+        const key = (a.type.includes("temperature") ? "temperature"
+          : a.type.includes("humid") ? "humidite"
+          : a.type.includes("fumee") ? "fumee"
+          : a.type.includes("battery") || a.type.includes("batterie") ? "batterie"
+          : a.type.includes("porte") ? "porte" : null) as ThresholdKey | null;
+        const lvl = key && a.valeur != null ? levelOf(key, a.valeur) : "critical";
+        if (lvl === "warning") playWarning();
+        else playCritical();
+        // 📧 Email aux destinataires pour les alertes critiques (anti-spam côté edge)
+        if (lvl === "critical") {
+          supabase.functions.invoke("send-alert-email", { body: { alert_id: a.id } })
+            .catch((e) => console.warn("send-alert-email failed", e));
+        }
+        refresh();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, () => refresh())
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "alerts" }, () => refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "mesures" }, () => refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "groupes_froids" }, () => refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "batteries_solaires" }, () => refresh())
