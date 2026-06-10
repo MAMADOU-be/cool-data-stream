@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
-import { THRESHOLDS } from "@/lib/thresholds";
+import { THRESHOLDS, levelOf, type ThresholdKey } from "@/lib/thresholds";
+import { playWarning, playCritical } from "@/lib/alertSound";
 
 export type CapteurType = "temperature" | "humidite" | "porte" | "fumee";
 export type AlertEtat = "creee" | "active" | "lue" | "resolue";
@@ -92,7 +93,26 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     const ch = supabase
       .channel("doundeul-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "alerts" }, () => refresh())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "alerts" }, (payload: any) => {
+        const a = payload.new as AlertRow;
+        // 🔔 Sonnerie : vigilance (warning) ou critique
+        const key = (a.type.includes("temperature") ? "temperature"
+          : a.type.includes("humid") ? "humidite"
+          : a.type.includes("fumee") ? "fumee"
+          : a.type.includes("battery") || a.type.includes("batterie") ? "batterie"
+          : a.type.includes("porte") ? "porte" : null) as ThresholdKey | null;
+        const lvl = key && a.valeur != null ? levelOf(key, a.valeur) : "critical";
+        if (lvl === "warning") playWarning();
+        else playCritical();
+        // 📧 Email aux destinataires pour les alertes critiques (anti-spam côté edge)
+        if (lvl === "critical") {
+          supabase.functions.invoke("send-alert-email", { body: { alert_id: a.id } })
+            .catch((e) => console.warn("send-alert-email failed", e));
+        }
+        refresh();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, () => refresh())
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "alerts" }, () => refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "mesures" }, () => refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "groupes_froids" }, () => refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "batteries_solaires" }, () => refresh())
@@ -193,6 +213,27 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     : null;
   const productionTotale = panneaux.reduce((a, p) => a + p.production_w, 0);
   const consommationTotale = groupes.filter((g) => g.etat).reduce((a, g) => a + g.consommation_w, 0);
+
+  // 🔔 Sonnerie de vigilance (orange) : seuils dépassés sans atteindre le critique.
+  // Les alertes critiques sont jouées via le canal realtime (INSERT). Anti-doublon par type.
+  const lastWarnRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    const now = Date.now();
+    const checks: Array<[ThresholdKey, number | null]> = [
+      ["temperature", tempMoyenne],
+      ["humidite", humiditeMoyenne],
+      ["fumee", fumeeMax],
+      ["batterie", batterie?.pourcentage ?? null],
+    ];
+    for (const [k, v] of checks) {
+      if (v == null) continue;
+      if (levelOf(k, v) !== "warning") continue;
+      const last = lastWarnRef.current[k] ?? 0;
+      if (now - last < 15 * 60_000) continue; // anti-spam 15 min
+      lastWarnRef.current[k] = now;
+      playWarning();
+    }
+  }, [tempMoyenne, humiditeMoyenne, fumeeMax, batterie?.pourcentage]);
 
   const toggleGroupe = async (id: string, etat: boolean) => {
     setGroupes((p) => p.map((g) => g.id === id ? { ...g, etat } : g));
