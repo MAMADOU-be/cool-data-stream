@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Bell, Settings, Sun, History, Users, Moon, Leaf } from "lucide-react";
 import { useFridgeData } from "@/hooks/useFridgeData";
@@ -6,6 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { unlockAudio } from "@/lib/alertSound";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
