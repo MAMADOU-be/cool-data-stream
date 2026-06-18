@@ -1,4 +1,4 @@
-# Doundeul Récolte — Supervision chambre froide solaire
+# Doundal Récolte — Supervision chambre froide solaire
 
 Application de supervision IoT pour une **chambre froide alimentée en solaire** située dans un entrepôt agricole (région des Niayes, Sénégal).
 
