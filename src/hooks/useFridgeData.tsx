@@ -214,6 +214,12 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         message: `🔥 Fumée détectée : ${fumeeMaxTick.toFixed(0)} ppm — risque incendie (seuil ${THRESHOLDS.fumee.critical} ppm)`,
         valeur: fumeeMaxTick, seuil: THRESHOLDS.fumee.critical, chambre_id: chambre.id, etat: "active",
       });
+      // Porte ouverte trop longtemps (durée simulée en minutes)
+      if (s.porteOpen && s.porteOpenMin > THRESHOLDS.porte.critical) alertes.push({
+        user_id: user.id, type: "porte_ouverte",
+        message: `🚪 Porte ouverte depuis ${s.porteOpenMin} min (> ${THRESHOLDS.porte.critical} min)`,
+        valeur: s.porteOpenMin, seuil: THRESHOLDS.porte.critical, chambre_id: chambre.id, etat: "active",
+      });
       if (alertes.length) {
         // éviter spam : ne créer qu'une alerte du même type par 2 min
         const recent = alerts.filter((a) => Date.now() - new Date(a.created_at).getTime() < 120_000);
