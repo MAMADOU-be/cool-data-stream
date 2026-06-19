@@ -147,18 +147,15 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       const s = stateRef.current;
 
-      // --- Porte : état persistant + compteur en minutes simulées (1 tick = 1 min) ---
+      // --- Porte : pilotée manuellement par l'utilisateur, compteur en min simulées (1 tick ≈ 1 min) ---
       const SIM_MIN_PER_TICK = 1;
-      if (s.porteOpen) {
+      const wantOpen = porteManuelleRef.current;
+      if (wantOpen) {
+        if (!s.porteOpen) { s.porteOpen = true; s.porteOpenMin = 0; }
         s.porteOpenMin += SIM_MIN_PER_TICK;
-        // ferme aléatoirement si pas encore en alerte critique (sinon on laisse pour que l'alerte se voie)
-        if (s.porteOpenMin < THRESHOLDS.porte.critical && Math.random() < 0.25) {
-          s.porteOpen = false;
-          s.porteOpenMin = 0;
-        }
       } else {
+        s.porteOpen = false;
         s.porteOpenMin = 0;
-        if (Math.random() < 0.04) s.porteOpen = true; // ouverture spontanée rare
       }
 
       // --- Température : dépend des groupes froids actifs ---
