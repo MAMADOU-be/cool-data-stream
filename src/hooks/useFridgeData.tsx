@@ -36,6 +36,8 @@ interface Ctx {
   consommationTotale: number;
   // actions
   toggleGroupe: (id: string, etat: boolean) => Promise<void>;
+  porteManuelle: boolean;
+  togglePorte: (open: boolean) => void;
   setAlertState: (id: string, etat: AlertEtat) => Promise<void>;
   resetAllAlerts: () => Promise<void>;
   refresh: () => Promise<void>;
