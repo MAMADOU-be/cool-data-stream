@@ -44,6 +44,7 @@ export default function Dashboard() {
     chambre, capteurs, latestByCapteur, groupes, panneaux, batterie,
     tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
     productionTotale, consommationTotale, alerts, toggleGroupe,
+    porteManuelle, togglePorte,
   } = useFridgeData();
   const { isOperateur } = useAuth();
 
