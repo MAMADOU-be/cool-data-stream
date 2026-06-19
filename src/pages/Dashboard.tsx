@@ -44,6 +44,7 @@ export default function Dashboard() {
     chambre, capteurs, latestByCapteur, groupes, panneaux, batterie,
     tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
     productionTotale, consommationTotale, alerts, toggleGroupe,
+    porteManuelle, togglePorte,
   } = useFridgeData();
   const { isOperateur } = useAuth();
 
@@ -165,20 +166,33 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Porte d'accès</CardTitle>
+            <CardDescription>
+              Ouvre/ferme la porte. Au-delà de {THRESHOLDS.porte.critical} min ouverte → alerte critique.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className={cn("flex items-center justify-between rounded-lg border p-4",
-              porteOuverte === 1 && "border-warning/40 bg-warning/10")}>
+              porteManuelle && "border-warning/40 bg-warning/10")}>
               <div className="flex items-center gap-3">
-                <DoorOpen className={cn("h-6 w-6", porteOuverte === 1 ? "text-warning" : "text-muted-foreground")} />
+                <DoorOpen className={cn("h-6 w-6", porteManuelle ? "text-warning" : "text-muted-foreground")} />
                 <div>
                   <div className="font-medium">État de la porte</div>
-                  <div className="text-xs text-muted-foreground">Seuil d'alerte : 5 minutes</div>
+                  <div className="text-xs text-muted-foreground">
+                    {porteManuelle ? "Ouverte — la température va monter" : "Fermée"}
+                  </div>
                 </div>
               </div>
-              <Badge variant={porteOuverte === 1 ? "destructive" : "secondary"}>
-                {porteOuverte === null ? "—" : porteOuverte === 1 ? "Ouverte" : "Fermée"}
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge variant={porteManuelle ? "destructive" : "secondary"}>
+                  {porteManuelle ? "Ouverte" : "Fermée"}
+                </Badge>
+                <Switch
+                  checked={porteManuelle}
+                  onCheckedChange={togglePorte}
+                  disabled={!isOperateur}
+                  aria-label="Ouvrir ou fermer la porte"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

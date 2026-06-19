@@ -36,6 +36,8 @@ interface Ctx {
   consommationTotale: number;
   // actions
   toggleGroupe: (id: string, etat: boolean) => Promise<void>;
+  porteManuelle: boolean;
+  togglePorte: (open: boolean) => void;
   setAlertState: (id: string, etat: AlertEtat) => Promise<void>;
   resetAllAlerts: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -55,6 +57,12 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
   const [latestByCapteur, setLatest] = useState<Record<string, Mesure | undefined>>({});
   const [recentMesures, setRecent] = useState<Mesure[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
+  const [porteManuelle, setPorteManuelle] = useState(false);
+  const porteManuelleRef = useRef(false);
+  const togglePorte = useCallback((open: boolean) => {
+    porteManuelleRef.current = open;
+    setPorteManuelle(open);
+  }, []);
   // État interne réactif de la simulation :
   //  - porteOpen / porteOpenMin : la porte reste réellement ouverte/fermée d'un tick à l'autre
   //  - tempTarget calculé selon le nb de groupes actifs (off => ambiant 28°C)
@@ -139,18 +147,15 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       const s = stateRef.current;
 
-      // --- Porte : état persistant + compteur en minutes simulées (1 tick = 1 min) ---
+      // --- Porte : pilotée manuellement par l'utilisateur, compteur en min simulées (1 tick ≈ 1 min) ---
       const SIM_MIN_PER_TICK = 1;
-      if (s.porteOpen) {
+      const wantOpen = porteManuelleRef.current;
+      if (wantOpen) {
+        if (!s.porteOpen) { s.porteOpen = true; s.porteOpenMin = 0; }
         s.porteOpenMin += SIM_MIN_PER_TICK;
-        // ferme aléatoirement si pas encore en alerte critique (sinon on laisse pour que l'alerte se voie)
-        if (s.porteOpenMin < THRESHOLDS.porte.critical && Math.random() < 0.25) {
-          s.porteOpen = false;
-          s.porteOpenMin = 0;
-        }
       } else {
+        s.porteOpen = false;
         s.porteOpenMin = 0;
-        if (Math.random() < 0.04) s.porteOpen = true; // ouverture spontanée rare
       }
 
       // --- Température : dépend des groupes froids actifs ---
@@ -296,7 +301,8 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
       latestByCapteur, recentMesures, alerts,
       tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
       productionTotale, consommationTotale,
-      toggleGroupe, setAlertState, resetAllAlerts, refresh,
+      toggleGroupe, porteManuelle, togglePorte,
+      setAlertState, resetAllAlerts, refresh,
     }}>
       {children}
     </FridgeContext.Provider>
