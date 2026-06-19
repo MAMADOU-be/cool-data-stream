@@ -39,9 +39,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-20 border-b border-border/60 glass-strong">
         <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
           <Link to="/dashboard" className="group flex items-center gap-2.5">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-solar shadow-elegant transition-transform duration-300 group-hover:scale-105">
-              <Leaf className="h-5 w-5 text-secondary-foreground" />
-              <span className="absolute -inset-1 -z-10 rounded-2xl bg-gradient-solar opacity-30 blur-md" />
+            <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-background/60 ring-1 ring-border/50 shadow-elegant transition-transform duration-300 group-hover:scale-105">
+              <img src={logoAsset.url} alt="Logo Doundeul Récolte" className="h-full w-full object-contain p-0.5" />
             </div>
             <div className="flex flex-col leading-tight">
               <span className="font-display text-base font-bold tracking-tight">Doundeul Récolte</span>
