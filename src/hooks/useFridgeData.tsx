@@ -57,6 +57,12 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
   const [latestByCapteur, setLatest] = useState<Record<string, Mesure | undefined>>({});
   const [recentMesures, setRecent] = useState<Mesure[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
+  const [porteManuelle, setPorteManuelle] = useState(false);
+  const porteManuelleRef = useRef(false);
+  const togglePorte = useCallback((open: boolean) => {
+    porteManuelleRef.current = open;
+    setPorteManuelle(open);
+  }, []);
   // État interne réactif de la simulation :
   //  - porteOpen / porteOpenMin : la porte reste réellement ouverte/fermée d'un tick à l'autre
   //  - tempTarget calculé selon le nb de groupes actifs (off => ambiant 28°C)
