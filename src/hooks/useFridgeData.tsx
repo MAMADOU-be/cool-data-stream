@@ -138,8 +138,32 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     const tick = async () => {
       if (cancelled) return;
       const s = stateRef.current;
-      // marche aléatoire
-      s.temp = Math.max(-2, Math.min(8, s.temp + (Math.random() - 0.5) * 0.6));
+
+      // --- Porte : état persistant + compteur en minutes simulées (1 tick = 1 min) ---
+      const SIM_MIN_PER_TICK = 1;
+      if (s.porteOpen) {
+        s.porteOpenMin += SIM_MIN_PER_TICK;
+        // ferme aléatoirement si pas encore en alerte critique (sinon on laisse pour que l'alerte se voie)
+        if (s.porteOpenMin < THRESHOLDS.porte.critical && Math.random() < 0.25) {
+          s.porteOpen = false;
+          s.porteOpenMin = 0;
+        }
+      } else {
+        s.porteOpenMin = 0;
+        if (Math.random() < 0.04) s.porteOpen = true; // ouverture spontanée rare
+      }
+
+      // --- Température : dépend des groupes froids actifs ---
+      const groupesActifs = groupes.filter((g) => g.etat).length;
+      const totalGroupes = Math.max(1, groupes.length);
+      const ratioFroid = groupesActifs / totalGroupes;
+      // cible : 3°C tous actifs, ~28°C tous coupés ; porte ouverte = +3°C
+      const tempTarget = 3 + (1 - ratioFroid) * 25 + (s.porteOpen ? 3 : 0);
+      // vitesse : refroidit vite quand groupes ON, monte plus doucement quand OFF
+      const speed = ratioFroid > 0 ? 0.6 : 0.35;
+      s.temp = +(s.temp + (tempTarget - s.temp) * speed + (Math.random() - 0.5) * 0.3).toFixed(2);
+      s.temp = Math.max(-2, Math.min(35, s.temp));
+
       s.humid = Math.max(40, Math.min(95, s.humid + (Math.random() - 0.5) * 3));
       s.batt = Math.max(10, Math.min(100, s.batt + (Math.random() - 0.55) * 0.8));
 
@@ -147,8 +171,8 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         let valeur = 0;
         if (c.type === "temperature") valeur = +(s.temp + (Math.random() - 0.5) * 0.4).toFixed(2);
         else if (c.type === "humidite") valeur = +(s.humid + (Math.random() - 0.5) * 2).toFixed(1);
-        else if (c.type === "fumee") valeur = +(Math.random() * 15 + (Math.random() < 0.01 ? 200 : 0)).toFixed(1); // ppm, pic rare
-        else valeur = Math.random() < 0.05 ? 1 : 0; // porte
+        else if (c.type === "fumee") valeur = +(Math.random() * 15 + (Math.random() < 0.01 ? 200 : 0)).toFixed(1);
+        else valeur = s.porteOpen ? 1 : 0; // porte : reflète l'état persistant
         return { capteur_id: c.id, chambre_id: c.chambre_id, type: c.type, valeur };
       });
       await supabase.from("mesures").insert(inserts);
