@@ -174,11 +174,22 @@ export default function Dashboard() {
             <div className={cn("flex items-center justify-between rounded-lg border p-4",
               porteManuelle && "border-warning/40 bg-warning/10")}>
               <div className="flex items-center gap-3">
+                <span className={cn("relative flex h-3 w-3")}>
+                  {porteManuelle && (
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning opacity-75" />
+                  )}
+                  <span className={cn("relative inline-flex h-3 w-3 rounded-full",
+                    porteManuelle ? "bg-warning" : "bg-success")} />
+                </span>
                 <DoorOpen className={cn("h-6 w-6", porteManuelle ? "text-warning" : "text-muted-foreground")} />
                 <div>
-                  <div className="font-medium">État de la porte</div>
+                  <div className="font-medium">
+                    {porteManuelle ? "Porte ouverte" : "Porte fermée"}
+                  </div>
                   <div className="text-xs text-muted-foreground">
-                    {porteManuelle ? "Ouverte — la température va monter" : "Fermée"}
+                    {porteLastToggle
+                      ? `Dernière bascule : ${porteLastToggle.toLocaleTimeString()}`
+                      : "Aucune bascule enregistrée"}
                   </div>
                 </div>
               </div>
