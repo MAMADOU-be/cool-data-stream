@@ -376,7 +376,7 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
       latestByCapteur, recentMesures, alerts,
       tempMoyenne, humiditeMoyenne, porteOuverte, fumeeMax,
       productionTotale, consommationTotale,
-      toggleGroupe, porteManuelle, togglePorte,
+      toggleGroupe, porteManuelle, porteLastToggle, togglePorte,
       setAlertState, resetAllAlerts, refresh,
     }}>
       {children}
