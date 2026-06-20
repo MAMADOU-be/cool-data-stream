@@ -195,14 +195,12 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         const groupesActifs = grs.filter((g) => g.etat).length;
         const totalGroupes = Math.max(1, grs.length);
         const ratioFroid = groupesActifs / totalGroupes;
-        const tempTarget = 3 + (1 - ratioFroid) * 25 + (s.porteOpen ? 3 : 0);
-        const speed = ratioFroid > 0 ? 0.6 : 0.35;
-        s.temp = +(s.temp + (tempTarget - s.temp) * speed + (Math.random() - 0.5) * 0.3).toFixed(2);
-        s.temp = Math.max(-2, Math.min(35, s.temp));
+        s.temp = nextTemperature(s.temp, ratioFroid, s.porteOpen, (Math.random() - 0.5) * 0.3);
 
         s.humid = Math.max(40, Math.min(95, s.humid + (Math.random() - 0.5) * 3));
         s.batt = Math.max(10, Math.min(100, s.batt + (Math.random() - 0.55) * 0.8));
 
+        const nowIso = new Date().toISOString();
         const inserts = caps.map((c) => {
           let valeur = 0;
           if (c.type === "temperature") valeur = +(s.temp + (Math.random() - 0.5) * 0.4).toFixed(2);
@@ -211,29 +209,58 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
           else valeur = s.porteOpen ? 1 : 0;
           return { capteur_id: c.id, chambre_id: c.chambre_id, type: c.type, valeur };
         });
-        await supabase.from("mesures").insert(inserts);
+        // Insert DB (fire-and-forget pour la latence) + maj locale IMMÉDIATE
+        supabase.from("mesures").insert(inserts).then(({ error }) => {
+          if (error) console.warn("mesures insert failed", error);
+        });
+        // Maj locale sans refetch : on construit des Mesure synthétiques
+        const localMesures: Mesure[] = inserts.map((i) => ({
+          id: `local-${nowIso}-${i.capteur_id}`,
+          capteur_id: i.capteur_id,
+          chambre_id: i.chambre_id,
+          type: i.type as CapteurType,
+          valeur: i.valeur,
+          timestamp: nowIso,
+        }));
+        setLatest((prev) => {
+          const next = { ...prev };
+          for (const m of localMesures) next[m.capteur_id] = m;
+          return next;
+        });
+        setRecent((prev) => [...localMesures, ...prev].slice(0, 2000));
 
         const bat = batterieRef.current;
         if (bat) {
           const v = +(46 + (s.batt / 100) * 4).toFixed(2);
-          await supabase.from("batteries_solaires")
-            .update({ pourcentage: +s.batt.toFixed(1), voltage: v, last_update: new Date().toISOString() })
-            .eq("id", bat.id);
+          const patch = { pourcentage: +s.batt.toFixed(1), voltage: v, last_update: nowIso };
+          setBatterie((prev) => prev ? { ...prev, ...patch } : prev);
+          supabase.from("batteries_solaires").update(patch).eq("id", bat.id)
+            .then(({ error }) => { if (error) console.warn("batt update failed", error); });
         }
 
         const h = new Date().getHours();
         const sunFactor = h >= 7 && h <= 18 ? Math.sin(((h - 7) / 11) * Math.PI) : 0;
+        const panneauxPatches: Record<string, number> = {};
         for (const p of panneauxRef.current) {
           const prod = +(500 * sunFactor * (0.85 + Math.random() * 0.3)).toFixed(0);
-          await supabase.from("panneaux_solaires")
-            .update({ production_w: prod, last_update: new Date().toISOString() }).eq("id", p.id);
+          panneauxPatches[p.id] = prod;
+          supabase.from("panneaux_solaires")
+            .update({ production_w: prod, last_update: nowIso }).eq("id", p.id)
+            .then(({ error }) => { if (error) console.warn("panneaux update failed", error); });
+        }
+        if (Object.keys(panneauxPatches).length) {
+          setPanneaux((prev) => prev.map((p) =>
+            panneauxPatches[p.id] != null
+              ? { ...p, production_w: panneauxPatches[p.id], last_update: nowIso }
+              : p
+          ));
         }
 
         // --- Évaluation des alertes (création OU résolution automatique) ---
         const tempMoy = s.temp;
         const fumeeMaxTick = Math.max(0, ...inserts.filter((i) => i.type === "fumee").map((i) => i.valeur));
 
-        const checks: Array<{ type: string; over: boolean; build: () => any }> = [
+        const checks: AlertCheck[] = [
           {
             type: "temperature_high",
             over: tempMoy > THRESHOLDS.temperature.critical,
@@ -272,20 +299,14 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
           },
         ];
 
-        const newAlerts: any[] = [];
-        for (const c of checks) {
-          const existing = alertsRef.current.find(
-            (a) => a.type === c.type && (a.etat === "creee" || a.etat === "active"),
-          );
-          if (c.over) {
-            // pas d'alerte active → on en crée UNE (et une seule, jamais de doublon)
-            if (!existing) newAlerts.push(c.build());
-          } else {
-            // condition rentrée → on résout l'alerte si elle existe
-            if (existing) await autoResolveType(c.type);
-          }
-        }
-        if (newAlerts.length) await supabase.from("alerts").insert(newAlerts);
+        const activeTypes = new Set(
+          alertsRef.current
+            .filter((a) => a.etat === "creee" || a.etat === "active")
+            .map((a) => a.type),
+        );
+        const { toCreate, toResolveTypes } = evaluateAlerts(checks, activeTypes);
+        for (const t of toResolveTypes) await autoResolveType(t);
+        if (toCreate.length) await supabase.from("alerts").insert(toCreate as any);
       } finally {
         busy = false;
       }
