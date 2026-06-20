@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { THRESHOLDS, levelOf, type ThresholdKey } from "@/lib/thresholds";
 import { playWarning, playCritical } from "@/lib/alertSound";
+import { nextTemperature, evaluateAlerts, type AlertCheck } from "@/lib/fridgeSimulation";
 
 export type CapteurType = "temperature" | "humidite" | "porte" | "fumee";
 export type AlertEtat = "creee" | "active" | "lue" | "resolue";
@@ -122,23 +123,6 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     const { data: ms } = await supabase
       .from("mesures").select("*").gte("timestamp", since)
       .order("timestamp", { ascending: false }).limit(2000);
-    const list = (ms as Mesure[]) ?? [];
-    setRecent(list);
-    const map: Record<string, Mesure | undefined> = {};
-    for (const m of list) if (!map[m.capteur_id]) map[m.capteur_id] = m;
-    setLatest(map);
-  }, [user]);
-
-  // refresh "léger" : seulement alertes + latest mesures (utilisé par la simulation)
-  const refreshLight = useCallback(async () => {
-    if (!user) return;
-    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const [{ data: al }, { data: ms }] = await Promise.all([
-      supabase.from("alerts").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("mesures").select("*").gte("timestamp", since)
-        .order("timestamp", { ascending: false }).limit(500),
-    ]);
-    setAlerts((al as any) ?? []);
     const list = (ms as Mesure[]) ?? [];
     setRecent(list);
     const map: Record<string, Mesure | undefined> = {};
