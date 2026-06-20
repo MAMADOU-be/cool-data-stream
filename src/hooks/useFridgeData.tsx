@@ -59,15 +59,41 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
   const [recentMesures, setRecent] = useState<Mesure[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
   const [porteManuelle, setPorteManuelle] = useState(false);
+  const [porteLastToggle, setPorteLastToggle] = useState<Date | null>(null);
   const porteManuelleRef = useRef(false);
+
+  // Refs miroir pour éviter de recréer l'interval de simulation à chaque render
+  const groupesRef = useRef<GroupeFroid[]>([]);
+  const panneauxRef = useRef<Panneau[]>([]);
+  const batterieRef = useRef<Batterie | null>(null);
+  const capteursRef = useRef<Capteur[]>([]);
+  const alertsRef = useRef<AlertRow[]>([]);
+  useEffect(() => { groupesRef.current = groupes; }, [groupes]);
+  useEffect(() => { panneauxRef.current = panneaux; }, [panneaux]);
+  useEffect(() => { batterieRef.current = batterie; }, [batterie]);
+  useEffect(() => { capteursRef.current = capteurs; }, [capteurs]);
+  useEffect(() => { alertsRef.current = alerts; }, [alerts]);
+
+  // Auto-résolution d'alertes du même type (côté serveur + local)
+  const autoResolveType = useCallback(async (type: string) => {
+    const toResolve = alertsRef.current.filter(
+      (a) => a.type === type && (a.etat === "creee" || a.etat === "active"),
+    );
+    if (!toResolve.length) return;
+    const ids = toResolve.map((a) => a.id);
+    setAlerts((p) => p.map((a) => ids.includes(a.id) ? { ...a, etat: "resolue" as AlertEtat, is_read: true } : a));
+    await supabase.from("alerts").update({ etat: "resolue", is_read: true }).in("id", ids);
+  }, []);
+
   const togglePorte = useCallback((open: boolean) => {
     porteManuelleRef.current = open;
     setPorteManuelle(open);
-  }, []);
-  // État interne réactif de la simulation :
-  //  - porteOpen / porteOpenMin : la porte reste réellement ouverte/fermée d'un tick à l'autre
-  //  - tempTarget calculé selon le nb de groupes actifs (off => ambiant 28°C)
-  //  - 1 tick (~8s) = ~1 minute simulée pour la durée porte
+    setPorteLastToggle(new Date());
+    // Fermeture → on résout immédiatement toute alerte porte_ouverte active
+    if (!open) autoResolveType("porte_ouverte");
+  }, [autoResolveType]);
+
+  // État interne réactif de la simulation
   const stateRef = useRef({
     temp: 3.5, humid: 70, batt: 85,
     porteOpen: false,
@@ -91,7 +117,7 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     setBatterie(ba as any);
     setAlerts((al as any) ?? []);
 
-    // dernières mesures
+    // dernières mesures (24h, limite raisonnable)
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { data: ms } = await supabase
       .from("mesures").select("*").gte("timestamp", since)
@@ -103,16 +129,35 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
     setLatest(map);
   }, [user]);
 
+  // refresh "léger" : seulement alertes + latest mesures (utilisé par la simulation)
+  const refreshLight = useCallback(async () => {
+    if (!user) return;
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const [{ data: al }, { data: ms }] = await Promise.all([
+      supabase.from("alerts").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("mesures").select("*").gte("timestamp", since)
+        .order("timestamp", { ascending: false }).limit(500),
+    ]);
+    setAlerts((al as any) ?? []);
+    const list = (ms as Mesure[]) ?? [];
+    setRecent(list);
+    const map: Record<string, Mesure | undefined> = {};
+    for (const m of list) if (!map[m.capteur_id]) map[m.capteur_id] = m;
+    setLatest(map);
+  }, [user]);
+
   useEffect(() => { if (user) refresh(); }, [user, refresh]);
 
-  // Realtime
+  // Realtime — uniquement les ALERTES (les mesures sont rafraîchies par la simulation elle-même).
+  // S'abonner à `mesures` provoquait un refresh complet par insert → l'app s'effondrait.
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel("doundeul-realtime")
+      .channel("doundeul-alerts")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "alerts" }, (payload: any) => {
         const a = payload.new as AlertRow;
-        // 🔔 Sonnerie : vigilance (warning) ou critique
+        setAlerts((p) => p.some((x) => x.id === a.id) ? p : [a, ...p].slice(0, 200));
+        // 🔔 Sonnerie
         const key = (a.type.includes("temperature") ? "temperature"
           : a.type.includes("humid") ? "humidite"
           : a.type.includes("fumee") ? "fumee"
@@ -121,123 +166,152 @@ export function FridgeDataProvider({ children }: { children: ReactNode }) {
         const lvl = key && a.valeur != null ? levelOf(key, a.valeur) : "critical";
         if (lvl === "warning") playWarning();
         else playCritical();
-        // 📧 Email aux destinataires pour les alertes critiques (anti-spam côté edge)
         if (lvl === "critical") {
           supabase.functions.invoke("send-alert-email", { body: { alert_id: a.id } })
             .catch((e) => console.warn("send-alert-email failed", e));
         }
-        refresh();
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, () => refresh())
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "alerts" }, () => refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "mesures" }, () => refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "groupes_froids" }, () => refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "batteries_solaires" }, () => refresh())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, (payload: any) => {
+        const a = payload.new as AlertRow;
+        setAlerts((p) => p.map((x) => x.id === a.id ? a : x));
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user, refresh]);
+  }, [user]);
 
-  // Simulation des capteurs (BNF-09 : 5 min en prod, 10s pour démo)
+  // Simulation des capteurs — interval STABLE, ne dépend que des entrées immuables
   useEffect(() => {
-    if (!user || !chambre || capteurs.length === 0 || !isOperateur) return;
+    if (!user || !chambre || !isOperateur) return;
     const enabled = localStorage.getItem(SIM_KEY);
     if (enabled === "false") return;
 
     let cancelled = false;
+    let busy = false;
     const tick = async () => {
-      if (cancelled) return;
-      const s = stateRef.current;
+      if (cancelled || busy) return;
+      const caps = capteursRef.current;
+      if (!caps.length) return;
+      busy = true;
+      try {
+        const s = stateRef.current;
 
-      // --- Porte : pilotée manuellement par l'utilisateur, compteur en min simulées (1 tick ≈ 1 min) ---
-      const SIM_MIN_PER_TICK = 1;
-      const wantOpen = porteManuelleRef.current;
-      if (wantOpen) {
-        if (!s.porteOpen) { s.porteOpen = true; s.porteOpenMin = 0; }
-        s.porteOpenMin += SIM_MIN_PER_TICK;
-      } else {
-        s.porteOpen = false;
-        s.porteOpenMin = 0;
-      }
+        // --- Porte pilotée manuellement ---
+        const SIM_MIN_PER_TICK = 1;
+        const wantOpen = porteManuelleRef.current;
+        if (wantOpen) {
+          if (!s.porteOpen) { s.porteOpen = true; s.porteOpenMin = 0; }
+          s.porteOpenMin += SIM_MIN_PER_TICK;
+        } else {
+          s.porteOpen = false;
+          s.porteOpenMin = 0;
+        }
 
-      // --- Température : dépend des groupes froids actifs ---
-      const groupesActifs = groupes.filter((g) => g.etat).length;
-      const totalGroupes = Math.max(1, groupes.length);
-      const ratioFroid = groupesActifs / totalGroupes;
-      // cible : 3°C tous actifs, ~28°C tous coupés ; porte ouverte = +3°C
-      const tempTarget = 3 + (1 - ratioFroid) * 25 + (s.porteOpen ? 3 : 0);
-      // vitesse : refroidit vite quand groupes ON, monte plus doucement quand OFF
-      const speed = ratioFroid > 0 ? 0.6 : 0.35;
-      s.temp = +(s.temp + (tempTarget - s.temp) * speed + (Math.random() - 0.5) * 0.3).toFixed(2);
-      s.temp = Math.max(-2, Math.min(35, s.temp));
+        // --- Température dépend des groupes froids actifs ---
+        const grs = groupesRef.current;
+        const groupesActifs = grs.filter((g) => g.etat).length;
+        const totalGroupes = Math.max(1, grs.length);
+        const ratioFroid = groupesActifs / totalGroupes;
+        const tempTarget = 3 + (1 - ratioFroid) * 25 + (s.porteOpen ? 3 : 0);
+        const speed = ratioFroid > 0 ? 0.6 : 0.35;
+        s.temp = +(s.temp + (tempTarget - s.temp) * speed + (Math.random() - 0.5) * 0.3).toFixed(2);
+        s.temp = Math.max(-2, Math.min(35, s.temp));
 
-      s.humid = Math.max(40, Math.min(95, s.humid + (Math.random() - 0.5) * 3));
-      s.batt = Math.max(10, Math.min(100, s.batt + (Math.random() - 0.55) * 0.8));
+        s.humid = Math.max(40, Math.min(95, s.humid + (Math.random() - 0.5) * 3));
+        s.batt = Math.max(10, Math.min(100, s.batt + (Math.random() - 0.55) * 0.8));
 
-      const inserts = capteurs.map((c) => {
-        let valeur = 0;
-        if (c.type === "temperature") valeur = +(s.temp + (Math.random() - 0.5) * 0.4).toFixed(2);
-        else if (c.type === "humidite") valeur = +(s.humid + (Math.random() - 0.5) * 2).toFixed(1);
-        else if (c.type === "fumee") valeur = +(Math.random() * 15 + (Math.random() < 0.01 ? 200 : 0)).toFixed(1);
-        else valeur = s.porteOpen ? 1 : 0; // porte : reflète l'état persistant
-        return { capteur_id: c.id, chambre_id: c.chambre_id, type: c.type, valeur };
-      });
-      await supabase.from("mesures").insert(inserts);
+        const inserts = caps.map((c) => {
+          let valeur = 0;
+          if (c.type === "temperature") valeur = +(s.temp + (Math.random() - 0.5) * 0.4).toFixed(2);
+          else if (c.type === "humidite") valeur = +(s.humid + (Math.random() - 0.5) * 2).toFixed(1);
+          else if (c.type === "fumee") valeur = +(Math.random() * 15 + (Math.random() < 0.01 ? 200 : 0)).toFixed(1);
+          else valeur = s.porteOpen ? 1 : 0;
+          return { capteur_id: c.id, chambre_id: c.chambre_id, type: c.type, valeur };
+        });
+        await supabase.from("mesures").insert(inserts);
 
-      // batterie
-      if (batterie) {
-        const v = +(46 + (s.batt / 100) * 4).toFixed(2);
-        await supabase.from("batteries_solaires")
-          .update({ pourcentage: +s.batt.toFixed(1), voltage: v, last_update: new Date().toISOString() })
-          .eq("id", batterie.id);
-      }
+        const bat = batterieRef.current;
+        if (bat) {
+          const v = +(46 + (s.batt / 100) * 4).toFixed(2);
+          await supabase.from("batteries_solaires")
+            .update({ pourcentage: +s.batt.toFixed(1), voltage: v, last_update: new Date().toISOString() })
+            .eq("id", bat.id);
+        }
 
-      // panneaux : production solaire variable selon l'heure
-      const h = new Date().getHours();
-      const sunFactor = h >= 7 && h <= 18 ? Math.sin(((h - 7) / 11) * Math.PI) : 0;
-      for (const p of panneaux) {
-        const prod = +(500 * sunFactor * (0.85 + Math.random() * 0.3)).toFixed(0);
-        await supabase.from("panneaux_solaires")
-          .update({ production_w: prod, last_update: new Date().toISOString() }).eq("id", p.id);
-      }
+        const h = new Date().getHours();
+        const sunFactor = h >= 7 && h <= 18 ? Math.sin(((h - 7) / 11) * Math.PI) : 0;
+        for (const p of panneauxRef.current) {
+          const prod = +(500 * sunFactor * (0.85 + Math.random() * 0.3)).toFixed(0);
+          await supabase.from("panneaux_solaires")
+            .update({ production_w: prod, last_update: new Date().toISOString() }).eq("id", p.id);
+        }
 
-      // alertes seuils (BF-06) — seuils centralisés dans src/lib/thresholds.ts
-      const alertes: any[] = [];
-      const tempMoy = s.temp;
-      if (tempMoy > THRESHOLDS.temperature.critical) alertes.push({
-        user_id: user.id, type: "temperature_high",
-        message: `Température ${tempMoy.toFixed(1)}°C dépasse le seuil de ${THRESHOLDS.temperature.critical}°C`,
-        valeur: +tempMoy.toFixed(2), seuil: THRESHOLDS.temperature.critical, chambre_id: chambre.id, etat: "active",
-      });
-      if (s.batt < THRESHOLDS.batterie.critical) alertes.push({
-        user_id: user.id, type: "battery_low",
-        message: `Batterie faible : ${s.batt.toFixed(0)}% (< ${THRESHOLDS.batterie.critical}%)`,
-        valeur: +s.batt.toFixed(1), seuil: THRESHOLDS.batterie.critical, chambre_id: chambre.id, etat: "active",
-      });
-      // Détection fumée : seuil critique
-      const fumeeMaxTick = Math.max(0, ...inserts.filter((i) => i.type === "fumee").map((i) => i.valeur));
-      if (fumeeMaxTick > THRESHOLDS.fumee.critical) alertes.push({
-        user_id: user.id, type: "fumee_detectee",
-        message: `🔥 Fumée détectée : ${fumeeMaxTick.toFixed(0)} ppm — risque incendie (seuil ${THRESHOLDS.fumee.critical} ppm)`,
-        valeur: fumeeMaxTick, seuil: THRESHOLDS.fumee.critical, chambre_id: chambre.id, etat: "active",
-      });
-      // Porte ouverte trop longtemps (durée simulée en minutes)
-      if (s.porteOpen && s.porteOpenMin > THRESHOLDS.porte.critical) alertes.push({
-        user_id: user.id, type: "porte_ouverte",
-        message: `🚪 Porte ouverte depuis ${s.porteOpenMin} min (> ${THRESHOLDS.porte.critical} min)`,
-        valeur: s.porteOpenMin, seuil: THRESHOLDS.porte.critical, chambre_id: chambre.id, etat: "active",
-      });
-      if (alertes.length) {
-        // éviter spam : ne créer qu'une alerte du même type par 2 min
-        const recent = alerts.filter((a) => Date.now() - new Date(a.created_at).getTime() < 120_000);
-        const fresh = alertes.filter((a) => !recent.some((r) => r.type === a.type));
-        if (fresh.length) await supabase.from("alerts").insert(fresh);
+        // --- Évaluation des alertes (création OU résolution automatique) ---
+        const tempMoy = s.temp;
+        const fumeeMaxTick = Math.max(0, ...inserts.filter((i) => i.type === "fumee").map((i) => i.valeur));
+
+        const checks: Array<{ type: string; over: boolean; build: () => any }> = [
+          {
+            type: "temperature_high",
+            over: tempMoy > THRESHOLDS.temperature.critical,
+            build: () => ({
+              user_id: user.id, type: "temperature_high",
+              message: `Température ${tempMoy.toFixed(1)}°C dépasse le seuil de ${THRESHOLDS.temperature.critical}°C`,
+              valeur: +tempMoy.toFixed(2), seuil: THRESHOLDS.temperature.critical, chambre_id: chambre.id, etat: "active",
+            }),
+          },
+          {
+            type: "battery_low",
+            over: s.batt < THRESHOLDS.batterie.critical,
+            build: () => ({
+              user_id: user.id, type: "battery_low",
+              message: `Batterie faible : ${s.batt.toFixed(0)}% (< ${THRESHOLDS.batterie.critical}%)`,
+              valeur: +s.batt.toFixed(1), seuil: THRESHOLDS.batterie.critical, chambre_id: chambre.id, etat: "active",
+            }),
+          },
+          {
+            type: "fumee_detectee",
+            over: fumeeMaxTick > THRESHOLDS.fumee.critical,
+            build: () => ({
+              user_id: user.id, type: "fumee_detectee",
+              message: `🔥 Fumée détectée : ${fumeeMaxTick.toFixed(0)} ppm — risque incendie (seuil ${THRESHOLDS.fumee.critical} ppm)`,
+              valeur: fumeeMaxTick, seuil: THRESHOLDS.fumee.critical, chambre_id: chambre.id, etat: "active",
+            }),
+          },
+          {
+            type: "porte_ouverte",
+            over: s.porteOpen && s.porteOpenMin > THRESHOLDS.porte.critical,
+            build: () => ({
+              user_id: user.id, type: "porte_ouverte",
+              message: `🚪 Porte ouverte depuis ${s.porteOpenMin} min (> ${THRESHOLDS.porte.critical} min)`,
+              valeur: s.porteOpenMin, seuil: THRESHOLDS.porte.critical, chambre_id: chambre.id, etat: "active",
+            }),
+          },
+        ];
+
+        const newAlerts: any[] = [];
+        for (const c of checks) {
+          const existing = alertsRef.current.find(
+            (a) => a.type === c.type && (a.etat === "creee" || a.etat === "active"),
+          );
+          if (c.over) {
+            // pas d'alerte active → on en crée UNE (et une seule, jamais de doublon)
+            if (!existing) newAlerts.push(c.build());
+          } else {
+            // condition rentrée → on résout l'alerte si elle existe
+            if (existing) await autoResolveType(c.type);
+          }
+        }
+        if (newAlerts.length) await supabase.from("alerts").insert(newAlerts);
+      } finally {
+        busy = false;
       }
     };
 
     tick();
-    const interval = setInterval(tick, 8000);
+    const interval = setInterval(tick, 12000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [user, chambre, capteurs, batterie, panneaux, isOperateur, alerts]);
+  }, [user, chambre, isOperateur, autoResolveType]);
+
 
   const tempMesures = recentMesures.filter((m) => m.type === "temperature");
   const humidMesures = recentMesures.filter((m) => m.type === "humidite");
