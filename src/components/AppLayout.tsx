@@ -97,6 +97,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2">
+            {user && (
+              <div className="hidden flex-col items-end leading-tight md:flex">
+                <span className="max-w-[160px] truncate text-xs font-medium">{user.email}</span>
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px] uppercase tracking-wide">
+                  {ROLE_LABEL[role] ?? role}
+                </Badge>
+              </div>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -106,6 +114,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
+            {user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onLogout}
+                aria-label="Se déconnecter"
+                className="rounded-full"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
