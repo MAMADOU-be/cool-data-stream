@@ -1,18 +1,28 @@
 import { ReactNode, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bell, Settings, Sun, History, Users, Moon } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LayoutDashboard, Bell, Settings, Sun, History, Users, Moon, LogOut } from "lucide-react";
 import { useFridgeData } from "@/hooks/useFridgeData";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/alertSound";
 import logoAsset from "@/assets/logo.png.asset.json";
 
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Administrateur",
+  operateur: "Opérateur",
+  agriculteur: "Agriculteur",
+  user: "Utilisateur",
+};
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { alerts } = useFridgeData();
   const { theme, toggle } = useTheme();
+  const { user, role, isAdmin, isOperateur, signOut } = useAuth();
   const actives = alerts.filter((a) => a.etat === "creee" || a.etat === "active").length;
 
   // Débloque l'audio dès la première interaction (politique navigateur).
@@ -22,14 +32,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("pointerdown", onFirst);
   }, []);
 
-
-  const navItems = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/historique", label: "Historique", icon: History },
-    { to: "/alerts", label: "Alertes", icon: Bell, badge: actives },
-    { to: "/admin", label: "Admin", icon: Users },
-    { to: "/settings", label: "Paramètres", icon: Settings },
+  const allItems = [
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: true },
+    { to: "/historique", label: "Historique", icon: History, show: true },
+    { to: "/alerts", label: "Alertes", icon: Bell, badge: actives, show: isOperateur },
+    { to: "/admin", label: "Admin", icon: Users, show: isAdmin },
+    { to: "/settings", label: "Paramètres", icon: Settings, show: true },
   ];
+  const navItems = allItems.filter((i) => i.show);
+
+  const onLogout = async () => {
+    await signOut();
+    navigate("/auth", { replace: true });
+  };
 
   return (
     <div className="relative min-h-screen">
